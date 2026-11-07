@@ -107,45 +107,107 @@
     }, true);
 })();
 
-// R-11: menú desplegable de la navbar (hamburguesa) con accesibilidad.
+// Navbar por grupos (mega-menú) con accesibilidad.
 (function () {
     "use strict";
 
-    function closeMenu() {
-        const links = document.getElementById("navLinks");
+    function closeAllPanels() {
+        document.querySelectorAll(".nav-panel").forEach(function (p) {
+            p.hidden = true;
+        });
+        document.querySelectorAll(".nav-group-toggle").forEach(function (b) {
+            b.setAttribute("aria-expanded", "false");
+        });
+    }
+
+    function closeMobileMenu() {
+        const groups = document.getElementById("navGroups");
         const toggle = document.getElementById("navToggle");
-        if (!links || !toggle) {
-            return;
+        if (groups) groups.classList.remove("open");
+        if (toggle) {
+            toggle.setAttribute("aria-expanded", "false");
+            toggle.textContent = "☰";
         }
-        links.classList.remove("open");
-        toggle.setAttribute("aria-expanded", "false");
-        toggle.textContent = "☰";
     }
 
     document.addEventListener("DOMContentLoaded", function () {
         const toggle = document.getElementById("navToggle");
-        const links = document.getElementById("navLinks");
-        if (!toggle || !links) {
-            return;
+        const groups = document.getElementById("navGroups");
+
+        if (toggle && groups) {
+            toggle.addEventListener("click", function () {
+                const open = groups.classList.toggle("open");
+                toggle.setAttribute("aria-expanded", String(open));
+                toggle.textContent = open ? "✕" : "☰";
+            });
         }
 
-        toggle.addEventListener("click", function () {
-            const open = links.classList.toggle("open");
-            toggle.setAttribute("aria-expanded", String(open));
-            toggle.textContent = open ? "✕" : "☰";
+        // Toggles de grupo
+        document.querySelectorAll(".nav-group-toggle").forEach(function (btn) {
+            btn.addEventListener("click", function (event) {
+                event.stopPropagation();
+                const panelId = btn.getAttribute("aria-controls");
+                const panel = panelId ? document.getElementById(panelId) : null;
+                const isOpen = btn.getAttribute("aria-expanded") === "true";
+
+                // Cerrar otros paneles
+                document.querySelectorAll(".nav-group-toggle").forEach(function (other) {
+                    if (other !== btn) {
+                        other.setAttribute("aria-expanded", "false");
+                        const otherPanel = document.getElementById(other.getAttribute("aria-controls"));
+                        if (otherPanel) otherPanel.hidden = true;
+                    }
+                });
+
+                if (panel) {
+                    if (isOpen) {
+                        panel.hidden = true;
+                        btn.setAttribute("aria-expanded", "false");
+                    } else {
+                        panel.hidden = false;
+                        btn.setAttribute("aria-expanded", "true");
+                    }
+                }
+            });
         });
 
-        document.addEventListener("keydown", function (event) {
-            if (event.key === "Escape" && links.classList.contains("open")) {
-                closeMenu();
-                toggle.focus();
+        // Cerrar al hacer clic fuera
+        document.addEventListener("click", function (event) {
+            const target = event.target;
+            if (!(target instanceof Element)) {
+                return;
+            }
+            if (!target.closest(".nav-group")) {
+                closeAllPanels();
             }
         });
 
-        links.querySelectorAll("a").forEach(function (a) {
+        // Escape cierra paneles y menú móvil
+        document.addEventListener("keydown", function (event) {
+            if (event.key !== "Escape") {
+                return;
+            }
+            const openPanel = document.querySelector(".nav-panel:not([hidden])");
+            if (openPanel) {
+                closeAllPanels();
+                const btn = document.querySelector('.nav-group-toggle[aria-expanded="true"]');
+                if (btn) btn.focus();
+                return;
+            }
+            const groupsEl = document.getElementById("navGroups");
+            if (groupsEl && groupsEl.classList.contains("open")) {
+                closeMobileMenu();
+                const t = document.getElementById("navToggle");
+                if (t) t.focus();
+            }
+        });
+
+        // Cerrar menú móvil al navegar
+        document.querySelectorAll(".nav-panel a").forEach(function (a) {
             a.addEventListener("click", function () {
                 if (window.matchMedia("(max-width: 768px)").matches) {
-                    closeMenu();
+                    closeMobileMenu();
+                    closeAllPanels();
                 }
             });
         });
