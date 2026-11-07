@@ -13,10 +13,11 @@
     {% endif %}
 
     <form action="{{ url_for('marcar_agua') }}" method="POST" enctype="multipart/form-data" class="upload-form">
-        <div class="drop-zone" id="dropZone">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Seleccionar archivo">
             <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
-            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+            <input type="file" name="file" accept=".pdf" id="fileInput">
         </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
         <div id="fileList" class="file-list"></div>
 
         <div class="range-input">
