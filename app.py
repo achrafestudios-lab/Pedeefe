@@ -24,6 +24,7 @@ import pytesseract
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.colors import Color
+from reportlab.lib import colors
 
 app = Flask(__name__)
 
@@ -500,7 +501,7 @@ def pdf_a_imagen():
         image_files = []
         for i, image in enumerate(images):
             image_path = os.path.join(temp_dir, f"pagina_{i + 1}.{format_choice}")
-            image.save(image_path, format_choice.upper())
+            image.save(image_path, "JPEG" if format_choice == "jpg" else "PNG")
             image_files.append((f"pagina_{i + 1}.{format_choice}", image_path))
 
         if total_pages == 1:
@@ -1103,7 +1104,7 @@ def create_page_number_pdf(page_width, page_height, number, position="bottom_cen
     packet = BytesIO()
     c = canvas.Canvas(packet, pagesize=(page_width, page_height))
     c.setFont("Helvetica", font_size)
-    c.setFillColor(0)  # Negro
+    c.setFillColor(colors.black)  # Negro
 
     text = str(number)
 
