@@ -7,7 +7,7 @@
     <p>Añade una contraseña a tu PDF para que solo se pueda abrir con ella.</p>
 
     {% if error %}
-    <div class="alert alert-error">
+    <div class="alert alert-error" role="alert" aria-live="assertive">
         {{ error }}
     </div>
     {% endif %}

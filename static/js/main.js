@@ -70,6 +70,43 @@
     }, true);
 })();
 
+// R-12: indicador de "procesando…" y bloqueo del botón al enviar.
+(function () {
+    "use strict";
+
+    document.addEventListener("submit", function (event) {
+        const form = event.target;
+        if (!(form instanceof HTMLFormElement) ||
+            !form.classList.contains("upload-form")) {
+            return;
+        }
+        const input = form.querySelector('input[type="file"]');
+        if (!input || input.files.length === 0) {
+            return;
+        }
+
+        const btn = form.querySelector("button[type=\"submit\"], .btn-primary");
+        if (btn && !btn.disabled) {
+            btn.disabled = true;
+            if (!btn.dataset.originalText) {
+                btn.dataset.originalText = btn.textContent;
+            }
+            btn.textContent = "Procesando…";
+        }
+
+        let loading = form.querySelector(".loading-indicator");
+        if (!loading) {
+            loading = document.createElement("div");
+            loading.className = "loading-indicator";
+            loading.setAttribute("role", "status");
+            loading.setAttribute("aria-live", "polite");
+            loading.textContent = "Procesando, por favor espera…";
+            form.appendChild(loading);
+        }
+        loading.hidden = false;
+    }, true);
+})();
+
 // R-11: menú desplegable de la navbar (hamburguesa) con accesibilidad.
 (function () {
     "use strict";

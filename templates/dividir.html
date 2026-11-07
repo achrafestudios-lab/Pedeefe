@@ -7,7 +7,7 @@
     <p>Sube un PDF y elige cómo dividirlo.</p>
 
     {% if error %}
-    <div class="alert alert-error">
+    <div class="alert alert-error" role="alert" aria-live="assertive">
         {{ error }}
         <br><small>Vuelve a seleccionar el archivo para reintentar (el navegador no conserva el archivo por seguridad).</small>
     </div>

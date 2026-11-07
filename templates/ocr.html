@@ -7,7 +7,7 @@
     <p>Extrae el texto de un PDF escaneado para poder copiarlo o buscarlo.</p>
 
     {% if error %}
-    <div class="alert alert-error">
+    <div class="alert alert-error" role="alert" aria-live="assertive">
         {{ error }}
     </div>
     {% endif %}
