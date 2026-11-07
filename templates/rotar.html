@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Rotar PDF{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>🔄 Rotar PDF</h1>
+    <p>Rotar todas las páginas de tu PDF 90°, 180° o 270°.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('rotar') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <fieldset class="mode-selector">
+            <legend>Ángulo de rotación</legend>
+            <label class="mode-option">
+                <input type="radio" name="angle" value="90" checked>
+                <span class="mode-label">
+                    <span class="mode-icon">↩️</span>
+                    <span>
+                        <strong>90°</strong>
+                        <small>Rotar a la derecha</small>
+                    </span>
+                </span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="angle" value="180">
+                <span class="mode-label">
+                    <span class="mode-icon">🔃</span>
+                    <span>
+                        <strong>180°</strong>
+                        <small>Rotar completamente</small>
+                    </span>
+                </span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="angle" value="270">
+                <span class="mode-label">
+                    <span class="mode-icon">↪️</span>
+                    <span>
+                        <strong>270°</strong>
+                        <small>Rotar a la izquierda</small>
+                    </span>
+                </span>
+            </label>
+        </fieldset>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Rotar PDF</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

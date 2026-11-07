@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Desproteger PDF{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>🔓 Desproteger PDF</h1>
+    <p>Quita la contraseña de un PDF protegido para poder editarlo de nuevo.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('desproteger') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="password">Contraseña</label>
+            <input type="password" name="password" id="password" placeholder="Introduce la contraseña del PDF" required>
+            <small>Necesitas la contraseña actual para quitar la protección.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Desproteger PDF</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+    const passwordInput = document.getElementById("password");
+
+    fileInput.addEventListener("change", updateFileList);
+    passwordInput.addEventListener("input", validateForm);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            validateForm();
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        validateForm();
+    }
+
+    function validateForm() {
+        const hasFile = fileInput.files.length > 0;
+        const hasPassword = passwordInput.value.trim() !== "";
+        submitBtn.disabled = !(hasFile && hasPassword);
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}PDF a Word{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>📝 PDF a Word</h1>
+    <p>Convierte tu PDF a un documento editable de Word (.docx).</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result-box">
+        <h2>✅ Conversión completada</h2>
+
+        {% if warning_scanned %}
+        <div class="alert alert-warning" style="margin-bottom: 1.5rem;">
+            <strong>⚠️ Posible PDF escaneado</strong>
+            <p style="margin-top: 0.5rem; font-weight: normal;">
+                Este PDF parece estar escaneado (sin texto real). La conversión puede salir 
+                vacía o mal formateada porque esta herramienta no realiza OCR (reconocimiento 
+                óptico de caracteres). Para PDFs escaneados, necesitarías una herramienta con OCR 
+                como Tesseract.
+            </p>
+        </div>
+        {% endif %}
+
+        <a href="{{ url_for('descargar_word', token=download_token) }}" class="btn btn-primary">
+            Descargar .docx
+        </a>
+    </div>
+    {% else %}
+
+    <form action="{{ url_for('pdf_a_word') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Convertir a Word</button>
+    </form>
+    {% endif %}
+</section>
+
+<script>
+    // Solo ejecutar si el formulario está visible (modo no-exito)
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput) {
+        const fileList = document.getElementById("fileList");
+        const submitBtn = document.getElementById("submitBtn");
+
+        fileInput.addEventListener("change", updateFileList);
+
+        function updateFileList() {
+            fileList.innerHTML = "";
+            const files = fileInput.files;
+
+            if (files.length === 0) {
+                submitBtn.disabled = true;
+                return;
+            }
+
+            for (const file of files) {
+                const item = document.createElement("div");
+                item.className = "file-item";
+                item.textContent = file.name;
+                fileList.appendChild(item);
+            }
+
+            submitBtn.disabled = false;
+        }
+
+        // Drag & drop
+        const dropZone = document.getElementById("dropZone");
+        dropZone.addEventListener("click", () => fileInput.click());
+        dropZone.addEventListener("dragover", (e) => {
+            e.preventDefault();
+            dropZone.classList.add("dragover");
+        });
+        dropZone.addEventListener("dragleave", () => {
+            dropZone.classList.remove("dragover");
+        });
+        dropZone.addEventListener("drop", (e) => {
+            e.preventDefault();
+            dropZone.classList.remove("dragover");
+            fileInput.files = e.dataTransfer.files;
+            updateFileList();
+        });
+
+        // Deshabilitar botón al inicio
+        submitBtn.disabled = true;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Comprimir PDF{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>📦 Comprimir PDF</h1>
+    <p>Reduce el tamaño de tu PDF sin perder calidad visible.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result-box">
+        <h2>✅ PDF comprimido</h2>
+        <div class="size-comparison">
+            <div class="size-item">
+                <span class="size-label">Tamaño original</span>
+                <span class="size-value">{{ original_size }}</span>
+            </div>
+            <div class="size-arrow">→</div>
+            <div class="size-item">
+                <span class="size-label">Tamaño comprimido</span>
+                <span class="size-value">{{ compressed_size }}</span>
+            </div>
+        </div>
+        <p class="reduction-info">Reducción: {{ reduction }}%</p>
+        <a href="{{ url_for('descargar_comprimido', token=download_token) }}" class="btn btn-primary">Descargar PDF comprimido</a>
+    </div>
+    {% else %}
+    <form action="{{ url_for('comprimir') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Comprimir PDF</button>
+    </form>
+    {% endif %}
+</section>
+
+{% if not success %}
+<script>
+    // Mostrar el archivo seleccionado
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endif %}
+{% endblock %}

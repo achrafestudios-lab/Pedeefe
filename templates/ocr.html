@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}OCR de PDF{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>🔍 OCR de PDF</h1>
+    <p>Extrae el texto de un PDF escaneado para poder copiarlo o buscarlo.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="alert alert-warning">
+        Esta herramienta necesita <strong>Tesseract OCR</strong> y <strong>Poppler</strong> instalados en el sistema.
+        <br>Instálalos con: <code>sudo apt install tesseract-ocr poppler-utils</code>
+    </div>
+
+    <form action="{{ url_for('ocr') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Extraer texto</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

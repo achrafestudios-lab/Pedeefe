@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Marca de agua{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>💧 Marca de agua</h1>
+    <p>Añade texto semitransparente en diagonal sobre cada página de tu PDF.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('marcar_agua') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="watermark_text">Texto de la marca de agua</label>
+            <input type="text" name="watermark_text" id="watermark_text" placeholder="Ej: CONFIDENCIAL, BORRADOR, COPIA" required>
+            <small>Este texto aparecerá en diagonal y semitransparente sobre cada página.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Añadir marca de agua</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+    const watermarkInput = document.getElementById("watermark_text");
+
+    fileInput.addEventListener("change", updateFileList);
+    watermarkInput.addEventListener("input", validateForm);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            validateForm();
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        validateForm();
+    }
+
+    function validateForm() {
+        const hasFile = fileInput.files.length > 0;
+        const hasText = watermarkInput.value.trim() !== "";
+        submitBtn.disabled = !(hasFile && hasText);
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

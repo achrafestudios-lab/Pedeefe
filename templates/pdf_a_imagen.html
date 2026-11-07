@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}PDF a Imagen{% endblock %}
+
+{% block content %}
+<section class="tool-page">
+    <h1>🖼️ PDF a Imagen</h1>
+    <p>Convierte cada página de tu PDF en una imagen JPG o PNG.</p>
+
+    {% if error %}
+    <div class="alert alert-error">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('pdf_a_imagen') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <!-- Selector de formato -->
+        <fieldset class="mode-selector">
+            <legend>Formato de imagen</legend>
+            <label class="mode-option">
+                <input type="radio" name="format" value="jpg" checked>
+                <span class="mode-label">
+                    <span class="mode-icon">📷</span>
+                    <span>
+                        <strong>JPG</strong>
+                        <small>Archivo más pequeño, sin transparencia</small>
+                    </span>
+                </span>
+            </label>
+            <label class="mode-option">
+                <input type="radio" name="format" value="png">
+                <span class="mode-label">
+                    <span class="mode-icon">🎨</span>
+                    <span>
+                        <strong>PNG</strong>
+                        <small>Mejor calidad, con transparencia</small>
+                    </span>
+                </span>
+            </label>
+        </fieldset>
+
+        <div class="drop-zone" id="dropZone">
+            <p>Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" required>
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Convertir a imagen</button>
+    </form>
+</section>
+
+<script>
+    // Mostrar el archivo seleccionado
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    // Drag & drop
+    const dropZone = document.getElementById("dropZone");
+    dropZone.addEventListener("click", () => fileInput.click());
+    dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+    });
+    dropZone.addEventListener("dragleave", () => {
+        dropZone.classList.remove("dragover");
+    });
+    dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        fileInput.files = e.dataTransfer.files;
+        updateFileList();
+    });
+
+    // Deshabilitar botón al inicio
+    submitBtn.disabled = true;
+</script>
+{% endblock %}
