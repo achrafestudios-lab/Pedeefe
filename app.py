@@ -22,7 +22,6 @@ import pytesseract
 
 # reportlab para generar la marca de agua como PDF
 from reportlab.pdfgen import canvas
-from reportlab.lib.pagesizes import A4
 from reportlab.lib.colors import Color
 from reportlab.lib import colors
 
@@ -1104,13 +1103,21 @@ def marcar_agua():
         reader = PdfReader(filepath)
         writer = PdfWriter()
 
-        # Crear la marca de agua como PDF
-        watermark_packet = create_watermark_pdf(watermark_text, A4[0], A4[1])
-        watermark_reader = PdfReader(watermark_packet)
-        watermark_page = watermark_reader.pages[0]
-
-        # Superponer la marca de agua en cada página
+        # Superponer la marca de agua en cada página, adaptando el tamaño
+        # de la marca al tamaño real de la página (mediabox/cropbox).
         for page in reader.pages:
+            page_box = page.mediabox
+            page_width = float(page_box.width)
+            page_height = float(page_box.height)
+            if page_width <= 0 or page_height <= 0:
+                page_box = page.cropbox
+                page_width = float(page_box.width)
+                page_height = float(page_box.height)
+
+            watermark_packet = create_watermark_pdf(
+                watermark_text, page_width, page_height
+            )
+            watermark_page = PdfReader(watermark_packet).pages[0]
             page.merge_page(watermark_page)
             writer.add_page(page)
 
