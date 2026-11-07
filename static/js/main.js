@@ -69,3 +69,48 @@
         }
     }, true);
 })();
+
+// R-11: menú desplegable de la navbar (hamburguesa) con accesibilidad.
+(function () {
+    "use strict";
+
+    function closeMenu() {
+        const links = document.getElementById("navLinks");
+        const toggle = document.getElementById("navToggle");
+        if (!links || !toggle) {
+            return;
+        }
+        links.classList.remove("open");
+        toggle.setAttribute("aria-expanded", "false");
+        toggle.textContent = "☰";
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const toggle = document.getElementById("navToggle");
+        const links = document.getElementById("navLinks");
+        if (!toggle || !links) {
+            return;
+        }
+
+        toggle.addEventListener("click", function () {
+            const open = links.classList.toggle("open");
+            toggle.setAttribute("aria-expanded", String(open));
+            toggle.textContent = open ? "✕" : "☰";
+        });
+
+        document.addEventListener("keydown", function (event) {
+            if (event.key === "Escape" && links.classList.contains("open")) {
+                closeMenu();
+                toggle.focus();
+            }
+        });
+
+        links.querySelectorAll("a").forEach(function (a) {
+            a.addEventListener("click", function () {
+                if (window.matchMedia("(max-width: 768px)").matches) {
+                    closeMenu();
+                }
+            });
+        });
+    });
+})();
