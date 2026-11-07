@@ -12,6 +12,17 @@
     </div>
     {% endif %}
 
+    <div class="alert alert-warning" role="note" aria-live="polite" style="margin-bottom: 1.5rem;">
+        <strong>⚠️ PDFs escaneados</strong>
+        <p style="margin-top: 0.5rem; font-weight: normal;">
+            Esta herramienta no hace OCR. Si tu PDF está escaneado (imágenes de texto),
+            el resultado puede salir vacío o mal formateado. Para esos casos, instala
+            Tesseract (<code>sudo apt install tesseract-ocr tesseract-ocr-spa</code> en
+            Linux) y usa la herramienta
+            <a href="{{ url_for('ocr') }}">OCR de PDF</a>.
+        </p>
+    </div>
+
     {% if success %}
     <div class="result-box">
         <h2>✅ Conversión completada</h2>
