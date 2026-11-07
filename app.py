@@ -72,9 +72,41 @@ def validate_pdf(filepath):
 
 
 def cleanup_folder(folder_path):
-    """Limpia todos los archivos de una carpeta temporal."""
-    if os.path.exists(folder_path):
-        shutil.rmtree(folder_path)
+    """Limpia todos los archivos de una carpeta temporal.
+
+    Solo actúa si la ruta resuelta queda dentro de UPLOAD_FOLDER, para evitar
+    borrar contenido fuera del directorio de subidas (defensa frente a C-01).
+    """
+    try:
+        base = os.path.realpath(UPLOAD_FOLDER)
+        target = os.path.realpath(folder_path)
+    except (OSError, ValueError):
+        return
+    if target == base or not target.startswith(base + os.sep):
+        return
+    if os.path.exists(target):
+        shutil.rmtree(target)
+
+
+def _valid_download_token(token):
+    """Valida que el token sea un UUID canónico (defensa frente a C-01)."""
+    if not isinstance(token, str) or not token:
+        return False
+    try:
+        return str(uuid.UUID(token)) == token
+    except (ValueError, AttributeError, TypeError):
+        return False
+
+
+def _safe_upload_dir(token):
+    """Devuelve la ruta de la carpeta temporal si el token es seguro, o None."""
+    if not _valid_download_token(token):
+        return None
+    base = os.path.realpath(UPLOAD_FOLDER)
+    target = os.path.realpath(os.path.join(base, token))
+    if target == base or not target.startswith(base + os.sep):
+        return None
+    return target
 
 
 # ─── Validación de tamaño por archivo ────────────────────────────────
@@ -394,7 +426,7 @@ def comprimir():
             original_size=format_size(original_size),
             compressed_size=format_size(compressed_size),
             reduction=round(reduction, 1),
-            download_token=temp_dir.name  # UUID de la carpeta temporal
+            download_token=os.path.basename(temp_dir)  # UUID de la carpeta temporal
         )
 
     except Exception as e:
@@ -405,7 +437,10 @@ def comprimir():
 @app.route("/descargar_comprimido/<token>")
 def descargar_comprimido(token):
     """Descarga el PDF comprimido y limpia la carpeta temporal."""
-    temp_dir = os.path.join(UPLOAD_FOLDER, token)
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
     output_path = os.path.join(temp_dir, "comprimido.pdf")
 
     if not os.path.exists(output_path):
@@ -666,7 +701,7 @@ def pdf_a_word():
             "pdf_a_word.html",
             success=True,
             download_path=output_path,
-            download_token=temp_dir.name,
+            download_token=os.path.basename(temp_dir),
             warning_scanned=(not has_text) or is_likely_scanned
         )
 
@@ -678,7 +713,10 @@ def pdf_a_word():
 @app.route("/descargar_word/<token>")
 def descargar_word(token):
     """Descarga el archivo .docx convertido y limpia la carpeta temporal."""
-    temp_dir = os.path.join(UPLOAD_FOLDER, token)
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
     output_path = os.path.join(temp_dir, "convertido.docx")
 
     if not os.path.exists(output_path):

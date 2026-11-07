@@ -144,28 +144,26 @@ class TestImagenAPdfPost(TempUploadMixin, unittest.TestCase):
         self.assertIn("imagenes.pdf", cd)
 
 
-class TestDeferredDownloadsBroken(TempUploadMixin, unittest.TestCase):
-    """Documenta el fallo actual de /comprimir y /pdf-a-word (temp_dir.name). [CONFIRMADO]"""
+class TestDeferredDownloadsFixed(TempUploadMixin, unittest.TestCase):
+    """Tras M0, /comprimir y /pdf-a-word entregan resultado y enlace de descarga. [CONFIRMADO]"""
 
-    def test_post_comprimir_fails_with_attributeerror(self):
+    def test_post_comprimir_succeeds_after_m0(self):
         pdf = make_pdf_bytes()
         data = {"file": (io.BytesIO(pdf), "a.pdf")}
         resp = self.client.post("/comprimir", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
-        self.assertIn("Error al comprimir", body)
-        self.assertIn("object has no attribute", body)
-        self.assertIn("name", body)
+        self.assertIn("PDF comprimido", body)
+        self.assertIn("/descargar_comprimido/", body)
 
-    def test_post_pdf_a_word_fails_with_attributeerror(self):
+    def test_post_pdf_a_word_succeeds_after_m0(self):
         pdf = make_pdf_bytes()
         data = {"file": (io.BytesIO(pdf), "a.pdf")}
         resp = self.client.post("/pdf-a-word", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
-        self.assertIn("Error al convertir", body)
-        self.assertIn("object has no attribute", body)
-        self.assertIn("name", body)
+        self.assertIn("Conversión completada", body)
+        self.assertIn("/descargar_word/", body)
 
 
 class TestValidDownloadUUID(TempUploadMixin, unittest.TestCase):
@@ -227,7 +225,6 @@ class TestC01Traversal(TempUploadMixin, unittest.TestCase):
             f.write(b"SENTINEL")
         return parent, path
 
-    @unittest.expectedFailure
     def test_c01_dotdot_returns_404_desired(self):
         self._make_sentinel("comprimido.pdf")
         resp = self.client.get("/descargar_comprimido/..")
@@ -238,18 +235,16 @@ class TestC01Traversal(TempUploadMixin, unittest.TestCase):
         self.client.get("/descargar_comprimido/..")
         self.assertTrue(os.path.exists(sentinel), "El centinela del padre fue borrado")
 
-    def test_c01_dotdot_cleanup_points_outside_uploads(self):
+    def test_c01_dotdot_does_not_invoke_cleanup_outside_uploads(self):
         self._make_sentinel("comprimido.pdf")
         self.client.get("/descargar_comprimido/..")
-        self.assertTrue(self.cleanup_calls, "cleanup_folder no se llamo")
-        resolved = os.path.realpath(self.cleanup_calls[-1])
-        uploads_real = os.path.realpath(self.uploads)
+        # Tras M0 el token invalido se rechaza antes de limpiar: no debe
+        # invocarse cleanup_folder con rutas derivadas de la URL.
         self.assertFalse(
-            resolved == uploads_real or resolved.startswith(uploads_real + os.sep),
-            f"cleanup_folder recibio ruta dentro de uploads: {resolved}",
+            self.cleanup_calls,
+            "cleanup_folder no debe llamarse para un token invalido",
         )
 
-    @unittest.expectedFailure
     def test_c01_percent2e2e_returns_404(self):
         self._make_sentinel("comprimido.pdf")
         resp = self.client.get("/descargar_comprimido/%2e%2e")
@@ -259,7 +254,6 @@ class TestC01Traversal(TempUploadMixin, unittest.TestCase):
         resp = self.client.get("/descargar_comprimido/etc/passwd")
         self.assertEqual(resp.status_code, 404)
 
-    @unittest.expectedFailure
     def test_c01_symlink_returns_404_desired(self):
         parent, sentinel = self._make_sentinel("comprimido.pdf")
         link = os.path.join(self.uploads, "link_outside")
