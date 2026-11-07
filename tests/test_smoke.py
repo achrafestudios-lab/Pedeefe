@@ -153,7 +153,7 @@ class TestDeferredDownloadsFixed(TempUploadMixin, unittest.TestCase):
         resp = self.client.post("/comprimir", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
-        self.assertIn("PDF comprimido", body)
+        self.assertIn("PDF optimizado", body)
         self.assertIn("/descargar_comprimido/", body)
 
     def test_post_pdf_a_word_succeeds_after_m0(self):

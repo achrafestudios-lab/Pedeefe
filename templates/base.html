@@ -15,7 +15,7 @@
         <div class="nav-links" id="navLinks">
             <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}>Unir PDF</a>
             <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}>Dividir PDF</a>
-            <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}>Comprimir PDF</a>
+            <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}>Optimizar PDF</a>
             <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}>PDF a Imagen</a>
             <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}>Imágenes a PDF</a>
             <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}>PDF a Word</a>

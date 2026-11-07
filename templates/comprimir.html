@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Comprimir PDF{% endblock %}
+{% block title %}Optimizar PDF{% endblock %}
 
 {% block content %}
 <section class="tool-page">
-    <h1>📦 Comprimir PDF</h1>
-    <p>Reduce el tamaño de tu PDF sin perder calidad visible.</p>
+    <h1>📦 Optimizar PDF</h1>
+    <p>Optimiza la estructura interna de tu PDF. Puede reducir el tamaño, pero no lo garantiza.</p>
 
     {% if error %}
     <div class="alert alert-error" role="alert" aria-live="assertive">
@@ -14,7 +14,7 @@
 
     {% if success %}
     <div class="result-box">
-        <h2>✅ PDF comprimido</h2>
+        <h2>✅ PDF optimizado</h2>
         <div class="size-comparison">
             <div class="size-item">
                 <span class="size-label">Tamaño original</span>
@@ -27,7 +27,7 @@
             </div>
         </div>
         <p class="reduction-info">Reducción: {{ reduction }}%</p>
-        <a href="{{ url_for('descargar_comprimido', token=download_token) }}" class="btn btn-primary">Descargar PDF comprimido</a>
+        <a href="{{ url_for('descargar_comprimido', token=download_token) }}" class="btn btn-primary">Descargar PDF optimizado</a>
     </div>
     {% else %}
     <form action="{{ url_for('comprimir') }}" method="POST" enctype="multipart/form-data" class="upload-form">
@@ -38,7 +38,7 @@
         <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
         <div id="fileList" class="file-list"></div>
 
-        <button type="submit" class="btn btn-primary" id="submitBtn">Comprimir PDF</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn">Optimizar PDF</button>
     </form>
     {% endif %}
 </section>

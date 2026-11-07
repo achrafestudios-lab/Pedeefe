@@ -217,7 +217,7 @@ class TestComprimirTools(TempUploadMixin, unittest.TestCase):
         resp = self.client.post("/comprimir", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
-        self.assertIn("PDF comprimido", body)
+        self.assertIn("PDF optimizado", body)
         token = self._token_from(body)
         self.assertIsNotNone(token)
         dresp = self.client.get(f"/descargar_comprimido/{token}")
