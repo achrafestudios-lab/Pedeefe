@@ -9,6 +9,7 @@
     {% if error %}
     <div class="alert alert-error">
         {{ error }}
+        <br><small>Vuelve a seleccionar el archivo para reintentar (el navegador no conserva el archivo por seguridad).</small>
     </div>
     {% endif %}
 
@@ -24,7 +25,7 @@
         <fieldset class="mode-selector">
             <legend>¿Cómo quieres dividir el PDF?</legend>
             <label class="mode-option">
-                <input type="radio" name="mode" value="individual" checked>
+                <input type="radio" name="mode" value="individual" {% if mode != 'rango' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">📄</span>
                     <span>
@@ -34,7 +35,7 @@
                 </span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="mode" value="rango">
+                <input type="radio" name="mode" value="rango" {% if mode == 'rango' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">🔢</span>
                     <span>
@@ -46,9 +47,9 @@
         </fieldset>
 
         <!-- Campo de rango (solo visible en modo rango) -->
-        <div class="range-input" id="rangeInput" style="display: none;">
+        <div class="range-input" id="rangeInput" style="display: {% if mode == 'rango' %}block{% else %}none{% endif %};">
             <label for="range">Rango de páginas:</label>
-            <input type="text" name="range" id="range" placeholder="Ej: 1-3">
+            <input type="text" name="range" id="range" placeholder="Ej: 1-3" value="{{ range_value or '' }}">
             <small>Introduce el rango en formato "inicio-fin" o un solo número para una página.</small>
         </div>
 
@@ -88,6 +89,12 @@
             rangeInput.style.display = radio.value === "rango" ? "block" : "none";
         });
     });
+
+    // Inicializar la visibilidad del rango según el modo conservado
+    const checkedMode = document.querySelector('input[name="mode"]:checked');
+    if (checkedMode && checkedMode.value === "rango") {
+        rangeInput.style.display = "block";
+    }
 
     // Drag & drop
     const dropZone = document.getElementById("dropZone");

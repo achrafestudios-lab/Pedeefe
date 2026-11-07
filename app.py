@@ -256,10 +256,14 @@ def dividir():
     # Recibir archivo
     file = request.files.get("file")
     if not file or file.filename == "":
-        return render_template("dividir.html", error="Selecciona un PDF para dividir.")
+        return render_template("dividir.html", error="Selecciona un PDF para dividir.",
+                              mode=request.form.get("mode", "individual"),
+                              range_value=request.form.get("range", ""))
 
     if not allowed_file(file.filename):
-        return render_template("dividir.html", error="El archivo seleccionado no es un PDF.")
+        return render_template("dividir.html", error="El archivo seleccionado no es un PDF.",
+                              mode=request.form.get("mode", "individual"),
+                              range_value=request.form.get("range", ""))
 
     # Validar tamaño del archivo
     size_error = validate_file_size(file, "dividir.html")
@@ -279,7 +283,9 @@ def dividir():
 
         # Validar que sea un PDF real
         if not validate_pdf(filepath):
-            return render_template("dividir.html", error="El archivo no se puede leer como PDF.")
+            return render_template("dividir.html", error="El archivo no se puede leer como PDF.",
+                                  mode=request.form.get("mode", "individual"),
+                                  range_value=request.form.get("range", ""))
 
         reader = PdfReader(filepath)
         total_pages = len(reader.pages)
@@ -305,7 +311,8 @@ def dividir():
             # Dividir por rango de páginas indicado por el usuario
             range_str = request.form.get("range", "").strip()
             if not range_str:
-                return render_template("dividir.html", error="Indica el rango de páginas.")
+                return render_template("dividir.html", error="Indica el rango de páginas.",
+                                      mode="rango", range_value=range_str)
 
             # Parsear el rango (ej: "1-3", "5-10")
             try:
@@ -320,24 +327,32 @@ def dividir():
             except ValueError:
                 return render_template(
                     "dividir.html",
-                    error="El rango no es válido. Usa el formato 'inicio-fin' (ej: 1-3)."
+                    error="El rango no es válido. Usa el formato 'inicio-fin' (ej: 1-3).",
+                    mode="rango",
+                    range_value=range_str
                 )
 
             # Validar el rango
             if start < 1 or end < 1:
                 return render_template(
                     "dividir.html",
-                    error=f"El rango debe empezar desde 1. El PDF tiene {total_pages} páginas."
+                    error=f"El rango debe empezar desde 1. El PDF tiene {total_pages} páginas.",
+                    mode="rango",
+                    range_value=range_str
                 )
             if start > total_pages or end > total_pages:
                 return render_template(
                     "dividir.html",
-                    error=f"El rango supera el número de páginas. El PDF tiene {total_pages} páginas."
+                    error=f"El rango supera el número de páginas. El PDF tiene {total_pages} páginas.",
+                    mode="rango",
+                    range_value=range_str
                 )
             if start > end:
                 return render_template(
                     "dividir.html",
-                    error="El inicio del rango no puede ser mayor que el fin."
+                    error="El inicio del rango no puede ser mayor que el fin.",
+                    mode="rango",
+                    range_value=range_str
                 )
 
             # Extraer las páginas del rango
@@ -352,10 +367,14 @@ def dividir():
             return send_file(output_path, as_attachment=True, download_name="rango_extraido.pdf")
 
         else:
-            return render_template("dividir.html", error="Selecciona un modo de división.")
+            return render_template("dividir.html", error="Selecciona un modo de división.",
+                                  mode=request.form.get("mode", "individual"),
+                                  range_value=request.form.get("range", ""))
 
     except Exception as e:
-        return render_template("dividir.html", error=f"Error al dividir: {str(e)}")
+        return render_template("dividir.html", error=f"Error al dividir: {str(e)}",
+                              mode=request.form.get("mode", "individual"),
+                              range_value=request.form.get("range", ""))
     finally:
         cleanup_folder(temp_dir)
 
@@ -463,10 +482,12 @@ def pdf_a_imagen():
     # Recibir archivo
     file = request.files.get("file")
     if not file or file.filename == "":
-        return render_template("pdf_a_imagen.html", error="Selecciona un PDF para convertir.")
+        return render_template("pdf_a_imagen.html", error="Selecciona un PDF para convertir.",
+                              format=request.form.get("format", "jpg"))
 
     if not allowed_file(file.filename):
-        return render_template("pdf_a_imagen.html", error="El archivo seleccionado no es un PDF.")
+        return render_template("pdf_a_imagen.html", error="El archivo seleccionado no es un PDF.",
+                              format=request.form.get("format", "jpg"))
 
     # Validar tamaño del archivo
     size_error = validate_file_size(file, "pdf_a_imagen.html")
@@ -491,7 +512,8 @@ def pdf_a_imagen():
 
         # Validar que sea un PDF real
         if not validate_pdf(filepath):
-            return render_template("pdf_a_imagen.html", error="El archivo no se puede leer como PDF.")
+            return render_template("pdf_a_imagen.html", error="El archivo no se puede leer como PDF.",
+                                  format=request.form.get("format", "jpg"))
 
         # Convertir cada página a imagen con pdf2image
         images = convert_from_path(filepath, dpi=200)
@@ -527,7 +549,8 @@ def pdf_a_imagen():
         # Mensaje amigable si Poppler no está instalado
         if "poppler" in error_msg.lower() or "not found" in error_msg.lower():
             error_msg = "No se encontró Poppler en el sistema. Instálalo con: sudo apt install poppler-utils"
-        return render_template("pdf_a_imagen.html", error=f"Error al convertir: {error_msg}")
+        return render_template("pdf_a_imagen.html", error=f"Error al convertir: {error_msg}",
+                              format=request.form.get("format", "jpg"))
     finally:
         cleanup_folder(temp_dir)
 
@@ -739,10 +762,12 @@ def rotar():
     # Recibir archivo
     file = request.files.get("file")
     if not file or file.filename == "":
-        return render_template("rotar.html", error="Selecciona un PDF para rotar.")
+        return render_template("rotar.html", error="Selecciona un PDF para rotar.",
+                              angle=request.form.get("angle", "90"))
 
     if not allowed_file(file.filename):
-        return render_template("rotar.html", error="El archivo seleccionado no es un PDF.")
+        return render_template("rotar.html", error="El archivo seleccionado no es un PDF.",
+                              angle=request.form.get("angle", "90"))
 
     # Validar tamaño del archivo
     size_error = validate_file_size(file, "rotar.html")
@@ -768,7 +793,8 @@ def rotar():
 
         # Validar que sea un PDF real
         if not validate_pdf(filepath):
-            return render_template("rotar.html", error="El archivo no se puede leer como PDF.")
+            return render_template("rotar.html", error="El archivo no se puede leer como PDF.",
+                                  angle=request.form.get("angle", "90"))
 
         # Rotar todas las páginas con pypdf
         reader = PdfReader(filepath)
@@ -787,7 +813,8 @@ def rotar():
 
     except Exception as e:
         cleanup_folder(temp_dir)
-        return render_template("rotar.html", error=f"Error al rotar: {str(e)}")
+        return render_template("rotar.html", error=f"Error al rotar: {str(e)}",
+                              angle=request.form.get("angle", "90"))
     finally:
         cleanup_folder(temp_dir)
 
@@ -812,10 +839,13 @@ def proteger():
     if size_error:
         return size_error
 
-    # Obtener la contraseña
+    # Obtener la contraseña y su confirmación
     password = request.form.get("password", "").strip()
+    password_confirm = request.form.get("password_confirm", "").strip()
     if not password:
         return render_template("proteger.html", error="Introduce una contraseña para proteger el PDF.")
+    if password != password_confirm:
+        return render_template("proteger.html", error="Las contraseñas no coinciden. Vuelve a introducirlas.")
 
     # Carpeta temporal única para esta petición
     temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
@@ -1036,10 +1066,12 @@ def marcar_agua():
     # Recibir archivo
     file = request.files.get("file")
     if not file or file.filename == "":
-        return render_template("marcar_agua.html", error="Selecciona un PDF para marcar.")
+        return render_template("marcar_agua.html", error="Selecciona un PDF para marcar.",
+                              watermark_text=request.form.get("watermark_text", ""))
 
     if not allowed_file(file.filename):
-        return render_template("marcar_agua.html", error="El archivo seleccionado no es un PDF.")
+        return render_template("marcar_agua.html", error="El archivo seleccionado no es un PDF.",
+                              watermark_text=request.form.get("watermark_text", ""))
 
     # Validar tamaño del archivo
     size_error = validate_file_size(file, "marcar_agua.html")
@@ -1049,7 +1081,8 @@ def marcar_agua():
     # Obtener el texto de la marca de agua
     watermark_text = request.form.get("watermark_text", "").strip()
     if not watermark_text:
-        return render_template("marcar_agua.html", error="Introduce el texto para la marca de agua.")
+        return render_template("marcar_agua.html", error="Introduce el texto para la marca de agua.",
+                              watermark_text=request.form.get("watermark_text", ""))
 
     # Carpeta temporal única para esta petición
     temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
@@ -1064,7 +1097,8 @@ def marcar_agua():
 
         # Validar que sea un PDF real
         if not validate_pdf(filepath):
-            return render_template("marcar_agua.html", error="El archivo no se puede leer como PDF.")
+            return render_template("marcar_agua.html", error="El archivo no se puede leer como PDF.",
+                                  watermark_text=request.form.get("watermark_text", ""))
 
         # Leer el PDF original
         reader = PdfReader(filepath)
@@ -1089,7 +1123,8 @@ def marcar_agua():
 
     except Exception as e:
         cleanup_folder(temp_dir)
-        return render_template("marcar_agua.html", error=f"Error al añadir marca de agua: {str(e)}")
+        return render_template("marcar_agua.html", error=f"Error al añadir marca de agua: {str(e)}",
+                              watermark_text=request.form.get("watermark_text", ""))
     finally:
         cleanup_folder(temp_dir)
 
@@ -1135,10 +1170,14 @@ def numerar():
     # Recibir archivo
     file = request.files.get("file")
     if not file or file.filename == "":
-        return render_template("numerar.html", error="Selecciona un PDF para numerar.")
+        return render_template("numerar.html", error="Selecciona un PDF para numerar.",
+                              position=request.form.get("position", "bottom_center"),
+                              start_num=request.form.get("start_num", "1"))
 
     if not allowed_file(file.filename):
-        return render_template("numerar.html", error="El archivo seleccionado no es un PDF.")
+        return render_template("numerar.html", error="El archivo seleccionado no es un PDF.",
+                              position=request.form.get("position", "bottom_center"),
+                              start_num=request.form.get("start_num", "1"))
 
     # Validar tamaño del archivo
     size_error = validate_file_size(file, "numerar.html")
@@ -1171,7 +1210,9 @@ def numerar():
 
         # Validar que sea un PDF real
         if not validate_pdf(filepath):
-            return render_template("numerar.html", error="El archivo no se puede leer como PDF.")
+            return render_template("numerar.html", error="El archivo no se puede leer como PDF.",
+                                  position=request.form.get("position", "bottom_center"),
+                                  start_num=request.form.get("start_num", "1"))
 
         # Leer el PDF original
         reader = PdfReader(filepath)
@@ -1200,7 +1241,9 @@ def numerar():
 
     except Exception as e:
         cleanup_folder(temp_dir)
-        return render_template("numerar.html", error=f"Error al numerar: {str(e)}")
+        return render_template("numerar.html", error=f"Error al numerar: {str(e)}",
+                              position=request.form.get("position", "bottom_center"),
+                              start_num=request.form.get("start_num", "1"))
     finally:
         cleanup_folder(temp_dir)
 

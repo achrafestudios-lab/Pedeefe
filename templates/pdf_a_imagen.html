@@ -17,7 +17,7 @@
         <fieldset class="mode-selector">
             <legend>Formato de imagen</legend>
             <label class="mode-option">
-                <input type="radio" name="format" value="jpg" checked>
+                <input type="radio" name="format" value="jpg" {% if format != 'png' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">📷</span>
                     <span>
@@ -27,7 +27,7 @@
                 </span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="format" value="png">
+                <input type="radio" name="format" value="png" {% if format == 'png' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">🎨</span>
                     <span>

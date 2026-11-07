@@ -417,7 +417,7 @@ class TestProtegerTools(TempUploadMixin, unittest.TestCase):
 
     def test_post_valid_password(self):
         pdf = make_pdf_bytes()
-        data = {"file": (io.BytesIO(pdf), "a.pdf"), "password": "secreta"}
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "password": "secreta", "password_confirm": "secreta"}
         resp = self.client.post("/proteger", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(resp.data.startswith(b"%PDF"))
@@ -440,7 +440,7 @@ class TestProtegerTools(TempUploadMixin, unittest.TestCase):
         self.assertIn("Selecciona un PDF", body)
 
     def test_post_corrupt_pdf_error(self):
-        data = {"file": (io.BytesIO(b"basura"), "a.pdf"), "password": "x"}
+        data = {"file": (io.BytesIO(b"basura"), "a.pdf"), "password": "x", "password_confirm": "x"}
         resp = self.client.post("/proteger", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
@@ -450,7 +450,7 @@ class TestProtegerTools(TempUploadMixin, unittest.TestCase):
 
 class TestDesprotegerTools(TempUploadMixin, unittest.TestCase):
     def _protect(self, pdf, password="secreta"):
-        data = {"file": (io.BytesIO(pdf), "a.pdf"), "password": password}
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "password": password, "password_confirm": password}
         resp = self.client.post("/proteger", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         return resp.data

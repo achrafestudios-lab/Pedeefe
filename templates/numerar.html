@@ -23,34 +23,34 @@
         <fieldset class="mode-selector">
             <legend>Posición del número</legend>
             <label class="mode-option">
-                <input type="radio" name="position" value="bottom_center" checked>
+                <input type="radio" name="position" value="bottom_center" {% if position != 'bottom_right' and position != 'bottom_left' and position != 'top_center' and position != 'top_right' and position != 'top_left' %}checked{% endif %}>
                 <span class="mode-label">Abajo centrado</span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="position" value="bottom_right">
+                <input type="radio" name="position" value="bottom_right" {% if position == 'bottom_right' %}checked{% endif %}>
                 <span class="mode-label">Abajo a la derecha</span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="position" value="bottom_left">
+                <input type="radio" name="position" value="bottom_left" {% if position == 'bottom_left' %}checked{% endif %}>
                 <span class="mode-label">Abajo a la izquierda</span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="position" value="top_center">
+                <input type="radio" name="position" value="top_center" {% if position == 'top_center' %}checked{% endif %}>
                 <span class="mode-label">Arriba centrado</span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="position" value="top_right">
+                <input type="radio" name="position" value="top_right" {% if position == 'top_right' %}checked{% endif %}>
                 <span class="mode-label">Arriba a la derecha</span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="position" value="top_left">
+                <input type="radio" name="position" value="top_left" {% if position == 'top_left' %}checked{% endif %}>
                 <span class="mode-label">Arriba a la izquierda</span>
             </label>
         </fieldset>
 
         <div class="range-input">
             <label for="start_num">Número inicial</label>
-            <input type="number" name="start_num" id="start_num" value="1" min="1">
+            <input type="number" name="start_num" id="start_num" value="{{ start_num or 1 }}" min="1">
             <small>Las páginas se numerarán empezando desde este número.</small>
         </div>
 

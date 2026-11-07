@@ -22,7 +22,7 @@
 
         <div class="range-input">
             <label for="watermark_text">Texto de la marca de agua</label>
-            <input type="text" name="watermark_text" id="watermark_text" placeholder="Ej: CONFIDENCIAL, BORRADOR, COPIA" required>
+            <input type="text" name="watermark_text" id="watermark_text" placeholder="Ej: CONFIDENCIAL, BORRADOR, COPIA" value="{{ watermark_text or '' }}" required>
             <small>Este texto aparecerá en diagonal y semitransparente sobre cada página.</small>
         </div>
 

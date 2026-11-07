@@ -23,7 +23,7 @@
         <fieldset class="mode-selector">
             <legend>Ángulo de rotación</legend>
             <label class="mode-option">
-                <input type="radio" name="angle" value="90" checked>
+                <input type="radio" name="angle" value="90" {% if angle != '180' and angle != '270' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">↩️</span>
                     <span>
@@ -33,7 +33,7 @@
                 </span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="angle" value="180">
+                <input type="radio" name="angle" value="180" {% if angle == '180' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">🔃</span>
                     <span>
@@ -43,7 +43,7 @@
                 </span>
             </label>
             <label class="mode-option">
-                <input type="radio" name="angle" value="270">
+                <input type="radio" name="angle" value="270" {% if angle == '270' %}checked{% endif %}>
                 <span class="mode-label">
                     <span class="mode-icon">↪️</span>
                     <span>
