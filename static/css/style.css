@@ -14,6 +14,19 @@ body {
     flex-direction: column;
 }
 
+/* ─── Utilidad: contenido solo para lectores de pantalla ───────── */
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
 /* ─── Navegación ───────────────────────────────────────────────── */
 .navbar {
     display: flex;
@@ -630,7 +643,7 @@ input[type="number"] {
 }
 
 .nav-group-toggle.active {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.25);
     font-weight: 700;
 }
 

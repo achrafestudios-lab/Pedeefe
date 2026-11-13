@@ -13,9 +13,9 @@
     {% endif %}
 
     <form action="{{ url_for('imagen_a_pdf') }}" method="POST" enctype="multipart/form-data" class="upload-form">
-        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-label="Seleccionar archivo">
-            <p>Arrastra tus imágenes aquí o haz clic para seleccionar</p>
-            <input type="file" name="files" accept=".jpg,.jpeg,.png,.gif,.bmp,.tiff,.webp" multiple id="fileInput">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tus imágenes aquí o haz clic para seleccionar</p>
+            <input type="file" name="files" accept=".jpg,.jpeg,.png,.gif,.bmp,.tiff,.webp" multiple id="fileInput" aria-labelledby="dropZoneText">
         </div>
         <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
         <div id="fileList" class="file-list"></div>
