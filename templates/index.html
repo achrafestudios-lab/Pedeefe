@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Inicio{% endblock %}
 
+
+{% block meta_description %}Pedeefe: herramientas para manipular PDFs en local. Une, divide, optimiza, convierte, rota, protege y numera PDFs sin subir archivos a internet.{% endblock %}
 {% block content %}
 <section class="hero">
     <h1>Manipula tus PDFs de forma local</h1>
@@ -10,62 +12,62 @@
 <h2 class="visually-hidden">Herramientas</h2>
 <section class="tools-grid">
     <a href="{{ url_for('unir') }}" class="tool-card">
-        <span class="tool-icon">🔗</span>
+        <span class="tool-icon" aria-hidden="true">🔗</span>
         <h3>Unir PDF</h3>
         <p>Combina varios PDFs en un solo archivo.</p>
     </a>
     <a href="{{ url_for('dividir') }}" class="tool-card">
-        <span class="tool-icon">✂️</span>
+        <span class="tool-icon" aria-hidden="true">✂️</span>
         <h3>Dividir PDF</h3>
         <p>Separa páginas o extrae un rango de un PDF.</p>
     </a>
     <a href="{{ url_for('comprimir') }}" class="tool-card">
-        <span class="tool-icon">📦</span>
+        <span class="tool-icon" aria-hidden="true">📦</span>
         <h3>Optimizar PDF</h3>
         <p>Optimiza la estructura de tu PDF. Puede reducir el tamaño, pero no lo garantiza.</p>
     </a>
     <a href="{{ url_for('pdf_a_imagen') }}" class="tool-card">
-        <span class="tool-icon">🖼️</span>
+        <span class="tool-icon" aria-hidden="true">🖼️</span>
         <h3>PDF a Imagen</h3>
         <p>Convierte las páginas de tu PDF en imágenes JPG o PNG.</p>
     </a>
     <a href="{{ url_for('imagen_a_pdf') }}" class="tool-card">
-        <span class="tool-icon">📷</span>
+        <span class="tool-icon" aria-hidden="true">📷</span>
         <h3>Imágenes a PDF</h3>
         <p>Convierte una o varias imágenes en un único PDF.</p>
     </a>
     <a href="{{ url_for('pdf_a_word') }}" class="tool-card">
-        <span class="tool-icon">📝</span>
+        <span class="tool-icon" aria-hidden="true">📝</span>
         <h3>PDF a Word</h3>
         <p>Convierte tu PDF a un documento editable de Word.</p>
     </a>
     <a href="{{ url_for('rotar') }}" class="tool-card">
-        <span class="tool-icon">🔄</span>
+        <span class="tool-icon" aria-hidden="true">🔄</span>
         <h3>Rotar PDF</h3>
         <p>Rotar las páginas de tu PDF 90°, 180° o 270°.</p>
     </a>
     <a href="{{ url_for('proteger') }}" class="tool-card">
-        <span class="tool-icon">🔒</span>
+        <span class="tool-icon" aria-hidden="true">🔒</span>
         <h3>Proteger PDF</h3>
         <p>Añade una contraseña a tu PDF para protegerlo.</p>
     </a>
     <a href="{{ url_for('desproteger') }}" class="tool-card">
-        <span class="tool-icon">🔓</span>
+        <span class="tool-icon" aria-hidden="true">🔓</span>
         <h3>Desproteger PDF</h3>
         <p>Quita la contraseña de un PDF protegido.</p>
     </a>
     <a href="{{ url_for('ocr') }}" class="tool-card">
-        <span class="tool-icon">🔍</span>
+        <span class="tool-icon" aria-hidden="true">🔍</span>
         <h3>OCR de PDF</h3>
         <p>Extrae el texto de un PDF escaneado.</p>
     </a>
     <a href="{{ url_for('marcar_agua') }}" class="tool-card">
-        <span class="tool-icon">💧</span>
+        <span class="tool-icon" aria-hidden="true">💧</span>
         <h3>Marca de agua</h3>
         <p>Añade texto semitransparente en diagonal sobre cada página.</p>
     </a>
     <a href="{{ url_for('numerar') }}" class="tool-card">
-        <span class="tool-icon">🔢</span>
+        <span class="tool-icon" aria-hidden="true">🔢</span>
         <h3>Numerar páginas</h3>
         <p>Añade números de página a tu PDF.</p>
     </a>

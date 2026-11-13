@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Proteger PDF{% endblock %}
 
+
+{% block meta_description %}Añade una contraseña a tu PDF para protegerlo, procesando todo en tu máquina con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>🔒 Proteger PDF</h1>
+    <h1><span aria-hidden="true">🔒</span> Proteger PDF</h1>
     <p>Añade una contraseña a tu PDF para que solo se pueda abrir con ella.</p>
 
     {% if error %}

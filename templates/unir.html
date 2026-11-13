@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Unir PDF{% endblock %}
 
+
+{% block meta_description %}Une varios PDFs en un solo archivo en local con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>🔗 Unir PDFs</h1>
+    <h1><span aria-hidden="true">🔗</span> Unir PDFs</h1>
     <p>Selecciona varios PDFs para combinarlos en un solo archivo.</p>
 
     {% if error %}

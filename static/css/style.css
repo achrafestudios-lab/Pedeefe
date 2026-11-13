@@ -750,7 +750,7 @@ input[type="number"] {
     min-width: 160px;
 }
 
-.nav-column h4 {
+.nav-column .nav-column-title {
     font-size: 0.85rem;
     color: var(--color-primary);
     margin-bottom: var(--space-1);

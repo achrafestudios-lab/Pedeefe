@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Desproteger PDF{% endblock %}
 
+
+{% block meta_description %}Quita la contraseña de un PDF protegido en local con Pedeefe, sin subir archivos a internet.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>🔓 Desproteger PDF</h1>
+    <h1><span aria-hidden="true">🔓</span> Desproteger PDF</h1>
     <p>Quita la contraseña de un PDF protegido para poder editarlo de nuevo.</p>
 
     {% if error %}

@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}PDF a Word{% endblock %}
 
+
+{% block meta_description %}Convierte un PDF a un documento editable de Word en local con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>📝 PDF a Word</h1>
+    <h1><span aria-hidden="true">📝</span> PDF a Word</h1>
     <p>Convierte tu PDF a un documento editable de Word (.docx).</p>
 
     {% if error %}

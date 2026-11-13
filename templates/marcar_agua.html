@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Marca de agua{% endblock %}
 
+
+{% block meta_description %}Añade una marca de agua de texto a cada página de tu PDF en local con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>💧 Marca de agua</h1>
+    <h1><span aria-hidden="true">💧</span> Marca de agua</h1>
     <p>Añade texto semitransparente en diagonal sobre cada página de tu PDF.</p>
 
     {% if error %}

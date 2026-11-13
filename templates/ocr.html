@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}OCR de PDF{% endblock %}
 
+
+{% block meta_description %}Extrae el texto de un PDF escaneado mediante OCR en local con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>🔍 OCR de PDF</h1>
+    <h1><span aria-hidden="true">🔍</span> OCR de PDF</h1>
     <p>Extrae el texto de un PDF escaneado para poder copiarlo o buscarlo.</p>
 
     {% if error %}

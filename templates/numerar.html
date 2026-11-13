@@ -1,9 +1,11 @@
 {% extends "base.html" %}
 {% block title %}Numerar páginas{% endblock %}
 
+
+{% block meta_description %}Numera las páginas de tu PDF en local con Pedeefe.{% endblock %}
 {% block content %}
 <section class="tool-page">
-    <h1>🔢 Numerar páginas</h1>
+    <h1><span aria-hidden="true">🔢</span> Numerar páginas</h1>
     <p>Añade números de página a tu PDF en la posición que prefieras.</p>
 
     {% if error %}

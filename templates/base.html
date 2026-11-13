@@ -8,8 +8,8 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <nav class="navbar">
-        <a href="{{ url_for('index') }}" class="logo">📄 Pedeefe</a>
+    <nav class="navbar" aria-label="Principal">
+        <a href="{{ url_for('index') }}" class="logo"><span aria-hidden="true">📄</span> Pedeefe</a>
         <button type="button" class="nav-toggle" id="navToggle"
                 aria-label="Abrir menú de herramientas" aria-expanded="false"
                 aria-controls="navGroups">☰</button>
@@ -21,8 +21,8 @@
                         data-group="ordenar" aria-expanded="false" aria-controls="panel-ordenar"
                         aria-haspopup="true">Ordenar PDF ▾</button>
                 <div class="nav-panel" id="panel-ordenar" hidden>
-                    <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}>🔗 Unir PDFs</a>
-                    <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}>✂️ Dividir PDF</a>
+                    <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}><span aria-hidden="true">🔗</span> Unir PDFs</a>
+                    <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Dividir PDF</a>
                 </div>
             </div>
 
@@ -32,8 +32,8 @@
                         data-group="optimizar" aria-expanded="false" aria-controls="panel-optimizar"
                         aria-haspopup="true">Optimizar PDF ▾</button>
                 <div class="nav-panel" id="panel-optimizar" hidden>
-                    <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}>📦 Optimizar PDF</a>
-                    <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}>🔍 OCR de PDF</a>
+                    <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}><span aria-hidden="true">📦</span> Optimizar PDF</a>
+                    <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}><span aria-hidden="true">🔍</span> OCR de PDF</a>
                 </div>
             </div>
 
@@ -44,13 +44,13 @@
                         aria-haspopup="true">Convertir ▾</button>
                 <div class="nav-panel nav-panel-columns" id="panel-convertir" hidden>
                     <div class="nav-column">
-                        <h4>Convertir a PDF</h4>
-                        <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}>🖼️ Imágenes a PDF</a>
+                        <span class="nav-column-title">Convertir a PDF</span>
+                        <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> Imágenes a PDF</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Convertir desde PDF</h4>
-                        <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}>🖼️ PDF a Imagen</a>
-                        <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}>📝 PDF a Word</a>
+                        <span class="nav-column-title">Convertir desde PDF</span>
+                        <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> PDF a Imagen</a>
+                        <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span> PDF a Word</a>
                     </div>
                 </div>
             </div>
@@ -61,9 +61,9 @@
                         data-group="editar" aria-expanded="false" aria-controls="panel-editar"
                         aria-haspopup="true">Editar PDF ▾</button>
                 <div class="nav-panel" id="panel-editar" hidden>
-                    <a href="{{ url_for('rotar') }}" {% if request.endpoint == 'rotar' %}aria-current="page"{% endif %}>🔄 Rotar PDF</a>
-                    <a href="{{ url_for('numerar') }}" {% if request.endpoint == 'numerar' %}aria-current="page"{% endif %}>🔢 Numerar páginas</a>
-                    <a href="{{ url_for('marcar_agua') }}" {% if request.endpoint == 'marcar_agua' %}aria-current="page"{% endif %}>💧 Marca de agua</a>
+                    <a href="{{ url_for('rotar') }}" {% if request.endpoint == 'rotar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔄</span> Rotar PDF</a>
+                    <a href="{{ url_for('numerar') }}" {% if request.endpoint == 'numerar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔢</span> Numerar páginas</a>
+                    <a href="{{ url_for('marcar_agua') }}" {% if request.endpoint == 'marcar_agua' %}aria-current="page"{% endif %}><span aria-hidden="true">💧</span> Marca de agua</a>
                 </div>
             </div>
 
@@ -73,8 +73,8 @@
                         data-group="seguridad" aria-expanded="false" aria-controls="panel-seguridad"
                         aria-haspopup="true">Seguridad PDF ▾</button>
                 <div class="nav-panel" id="panel-seguridad" hidden>
-                    <a href="{{ url_for('proteger') }}" {% if request.endpoint == 'proteger' %}aria-current="page"{% endif %}>🔒 Proteger PDF</a>
-                    <a href="{{ url_for('desproteger') }}" {% if request.endpoint == 'desproteger' %}aria-current="page"{% endif %}>🔓 Desproteger PDF</a>
+                    <a href="{{ url_for('proteger') }}" {% if request.endpoint == 'proteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔒</span> Proteger PDF</a>
+                    <a href="{{ url_for('desproteger') }}" {% if request.endpoint == 'desproteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔓</span> Desproteger PDF</a>
                 </div>
             </div>
 
@@ -85,45 +85,45 @@
                         aria-haspopup="true">Todas las herramientas ▾</button>
                 <div class="nav-panel nav-panel-mega" id="panel-todas" hidden>
                     <div class="nav-column">
-                        <h4>Ordenar PDF</h4>
-                        <a href="{{ url_for('unir') }}">🔗 Unir PDFs</a>
-                        <a href="{{ url_for('dividir') }}">✂️ Dividir PDF</a>
+                        <span class="nav-column-title">Ordenar PDF</span>
+                        <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}><span aria-hidden="true">🔗</span> Unir PDFs</a>
+                        <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Dividir PDF</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Optimizar PDF</h4>
-                        <a href="{{ url_for('comprimir') }}">📦 Optimizar PDF</a>
-                        <a href="{{ url_for('ocr') }}">🔍 OCR de PDF</a>
+                        <span class="nav-column-title">Optimizar PDF</span>
+                        <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}><span aria-hidden="true">📦</span> Optimizar PDF</a>
+                        <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}><span aria-hidden="true">🔍</span> OCR de PDF</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Convertir a PDF</h4>
-                        <a href="{{ url_for('imagen_a_pdf') }}">🖼️ Imágenes a PDF</a>
+                        <span class="nav-column-title">Convertir a PDF</span>
+                        <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> Imágenes a PDF</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Convertir desde PDF</h4>
-                        <a href="{{ url_for('pdf_a_imagen') }}">🖼️ PDF a Imagen</a>
-                        <a href="{{ url_for('pdf_a_word') }}">📝 PDF a Word</a>
+                        <span class="nav-column-title">Convertir desde PDF</span>
+                        <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> PDF a Imagen</a>
+                        <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span> PDF a Word</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Editar PDF</h4>
-                        <a href="{{ url_for('rotar') }}">🔄 Rotar PDF</a>
-                        <a href="{{ url_for('numerar') }}">🔢 Numerar páginas</a>
-                        <a href="{{ url_for('marcar_agua') }}">💧 Marca de agua</a>
+                        <span class="nav-column-title">Editar PDF</span>
+                        <a href="{{ url_for('rotar') }}" {% if request.endpoint == 'rotar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔄</span> Rotar PDF</a>
+                        <a href="{{ url_for('numerar') }}" {% if request.endpoint == 'numerar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔢</span> Numerar páginas</a>
+                        <a href="{{ url_for('marcar_agua') }}" {% if request.endpoint == 'marcar_agua' %}aria-current="page"{% endif %}><span aria-hidden="true">💧</span> Marca de agua</a>
                     </div>
                     <div class="nav-column">
-                        <h4>Seguridad de PDF</h4>
-                        <a href="{{ url_for('proteger') }}">🔒 Proteger PDF</a>
-                        <a href="{{ url_for('desproteger') }}">🔓 Desproteger PDF</a>
+                        <span class="nav-column-title">Seguridad de PDF</span>
+                        <a href="{{ url_for('proteger') }}" {% if request.endpoint == 'proteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔒</span> Proteger PDF</a>
+                        <a href="{{ url_for('desproteger') }}" {% if request.endpoint == 'desproteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔓</span> Desproteger PDF</a>
                     </div>
                 </div>
             </div>
         </div>
     </nav>
 
-    <main class="container">
+    <main class="container" id="main-content" tabindex="-1">
         {% block content %}{% endblock %}
     </main>
 
-    <footer class="footer">
+    <footer class="footer" role="contentinfo">
         <p>Pedeefe — Manipula PDFs de forma local, sin subir nada a internet.</p>
     </footer>
 
