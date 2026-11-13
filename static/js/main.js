@@ -213,3 +213,43 @@
         });
     });
 })();
+// Drop zone común (R-21): click para abrir selector y drag & drop genérico.
+// Sustituye los bloques duplicados que había en las plantillas.
+(function () {
+    "use strict";
+
+    function initDropZone(zone) {
+        const input = zone.querySelector('input[type="file"]');
+        if (!input) {
+            return;
+        }
+        zone.addEventListener("click", function () {
+            input.click();
+        });
+        zone.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            zone.classList.add("dragover");
+        });
+        zone.addEventListener("dragleave", function () {
+            zone.classList.remove("dragover");
+        });
+        zone.addEventListener("drop", function (e) {
+            e.preventDefault();
+            zone.classList.remove("dragover");
+            if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+                input.files = e.dataTransfer.files;
+                input.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        });
+    }
+
+    function initAll() {
+        document.querySelectorAll(".drop-zone").forEach(initDropZone);
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initAll);
+    } else {
+        initAll();
+    }
+})();
