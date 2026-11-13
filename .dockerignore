@@ -1,0 +1,8 @@
+.venv/
+uploads/
+__pycache__/
+*.pyc
+.git/
+.idea/
+.pytest_cache/
+.ruff_cache/
