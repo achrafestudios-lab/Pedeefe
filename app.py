@@ -335,14 +335,14 @@ def dividir():
             if start < 1 or end < 1:
                 return render_template(
                     "dividir.html",
-                    error=f"El rango debe empezar desde 1. El PDF tiene {total_pages} páginas.",
+                    error=f"El rango debe empezar desde 1. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}.",
                     mode="rango",
                     range_value=range_str
                 )
             if start > total_pages or end > total_pages:
                 return render_template(
                     "dividir.html",
-                    error=f"El rango supera el número de páginas. El PDF tiene {total_pages} páginas.",
+                    error=f"El rango supera el número de páginas. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}.",
                     mode="rango",
                     range_value=range_str
                 )

@@ -34,8 +34,7 @@
             <strong>⚠️ Posible PDF escaneado</strong>
             <p style="margin-top: 0.5rem; font-weight: normal;">
                 Este PDF parece estar escaneado (sin texto real). La conversión puede salir 
-                vacía o mal formateada porque esta herramienta no realiza OCR (reconocimiento 
-                óptico de caracteres). Para PDFs escaneados, necesitarías una herramienta con OCR 
+                vacía o mal formateada porque esta herramienta no reconoce texto en imágenes. Para PDFs escaneados, necesitarías una herramienta con OCR 
                 como Tesseract.
             </p>
         </div>
@@ -49,7 +48,7 @@
 
     <form action="{{ url_for('pdf_a_word') }}" method="POST" enctype="multipart/form-data" class="upload-form">
         <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
-            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionar</p>
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
             <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
         </div>
         <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
