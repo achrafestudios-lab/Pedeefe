@@ -10,6 +10,9 @@
 </p>
 
 <p align="center">
+  <a href="https://github.com/achrafestudios-lab/Pedeefe/actions/workflows/ci.yml">
+    <img src="https://github.com/achrafestudios-lab/Pedeefe/actions/workflows/ci.yml/badge.svg?style=for-the-badge" alt="CI">
+  </a>
   <a href="https://github.com/achrafestudios-lab/Pedeefe">
     <img src="https://img.shields.io/badge/repo-Pedeefe-0A7CFF?style=for-the-badge&logo=github" alt="GitHub">
   </a>
@@ -346,6 +349,10 @@ Comprobaciones adicionales:
 .venv/bin/python -m py_compile app.py
 .venv/bin/python -m pip check
 ```
+
+Estas mismas comprobaciones se ejecutan automáticamente en
+[GitHub Actions](https://github.com/achrafestudios-lab/Pedeefe/actions/workflows/ci.yml)
+en cada push y Pull Request a `main`.
 
 ---
 
