@@ -6,8 +6,8 @@ No requieren servidor ni puerto. Se ejecutan con:
 
 Convenciones:
 - Cada caso documenta si es [CONFIRMADO] (medido) o [INFERIDO].
-- Las pruebas destructivas de C-01 usan UPLOAD_FOLDER temporal en
-  /tmp/opencode y monkeypatchean ``cleanup_folder`` para no borrar nada.
+- Las pruebas destructivas de C-01 usan UPLOAD_FOLDER temporal en el directorio
+  del sistema y monkeypatchean ``cleanup_folder`` para no borrar nada.
 - Tesseract está ausente en este entorno: /ocr no se prueba aquí.
 """
 
@@ -45,12 +45,12 @@ def make_image_bytes(size=(20, 30), color="red", fmt="PNG"):
 
 
 class TempUploadMixin:
-    """Cambia UPLOAD_FOLDER a un directorio temporal en /tmp/opencode."""
+    """Cambia UPLOAD_FOLDER a un directorio temporal del sistema."""
 
     def setUp(self):
         self._orig_upload = app_module.UPLOAD_FOLDER
         self._orig_config = app_module.app.config.get("UPLOAD_FOLDER")
-        self.tmp_root = tempfile.mkdtemp(prefix="pedeefe_test_", dir="/tmp/opencode")
+        self.tmp_root = tempfile.mkdtemp(prefix="pedeefe_test_")
         self.uploads = os.path.join(self.tmp_root, "uploads")
         os.makedirs(self.uploads, exist_ok=True)
         app_module.UPLOAD_FOLDER = self.uploads

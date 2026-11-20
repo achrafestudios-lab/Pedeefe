@@ -50,7 +50,7 @@ class TempUploadMixin:
     def setUp(self):
         self._orig_upload = app_module.UPLOAD_FOLDER
         self._orig_config = app_module.app.config.get("UPLOAD_FOLDER")
-        self.tmp_root = tempfile.mkdtemp(prefix="pedeefe_tools_", dir="/tmp/opencode")
+        self.tmp_root = tempfile.mkdtemp(prefix="pedeefe_tools_")
         self.uploads = os.path.join(self.tmp_root, "uploads")
         os.makedirs(self.uploads, exist_ok=True)
         app_module.UPLOAD_FOLDER = self.uploads
