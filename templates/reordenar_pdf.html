@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Reordenar PDF{% endblock %}
+
+
+{% block meta_description %}Reordena las páginas de un PDF en el orden que indiques, procesando todo en tu máquina.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1>🔀 Reordenar PDF</h1>
+    <p>Sube un PDF e indica el nuevo orden de sus páginas.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+        <br><small>Vuelve a seleccionar el archivo para reintentar (el navegador no conserva el archivo por seguridad).</small>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('reordenar_pdf') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="order">Nuevo orden de páginas:</label>
+            <input type="text" name="order" id="order" placeholder="Ej: 3,1,2 o 3,1,2,4-6" value="{{ order_value or '' }}">
+            <small>Introduce las páginas o rangos separados por comas (ej: 3,1,2 o 3,1,2,4-6). Puedes repetir páginas.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Reordenar PDF</button>
+    </form>
+</section>
+{% endblock %}

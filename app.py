@@ -151,6 +151,8 @@ REFERER_TO_TEMPLATE = {
     "/ocr": "ocr.html",
     "/marcar-agua": "marcar_agua.html",
     "/numerar": "numerar.html",
+    "/recortar-pdf": "recortar_pdf.html",
+    "/reordenar-pdf": "reordenar_pdf.html",
 }
 
 
@@ -1360,6 +1362,195 @@ def numerar():
         return render_template("numerar.html", error=f"Error al numerar: {str(e)}",
                               position=request.form.get("position", "bottom_center"),
                               start_num=request.form.get("start_num", "1"))
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── Helper: parsear lista de páginas (rangos y comas) ───────────────
+def _parse_page_spec(spec, total_pages):
+    """Parsea una especificación de páginas (ej. "1-3,5,7-9").
+
+    Devuelve (lista_de_indices_0based, None) si es válida, o (None, mensaje_error)
+    si no lo es. Permite duplicados y rangos inclusivos.
+    """
+    spec = (spec or "").strip()
+    if not spec:
+        return None, "Indica el rango de páginas."
+    result = []
+    for part in spec.split(","):
+        part = part.strip()
+        if not part:
+            return None, "La lista de páginas no es válida. Usa el formato '1-3,5,7-9'."
+        if "-" in part:
+            pieces = part.split("-", 1)
+            a, b = pieces[0].strip(), pieces[1].strip()
+            if not a.isdigit() or not b.isdigit():
+                return None, "La lista de páginas no es válida. Usa el formato '1-3,5,7-9'."
+            start, end = int(a), int(b)
+            if start < 1 or end < 1:
+                return None, f"El rango debe empezar desde 1. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}."
+            if start > end:
+                return None, "El inicio del rango no puede ser mayor que el fin."
+            if start > total_pages or end > total_pages:
+                return None, f"El rango supera el número de páginas. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}."
+            result.extend(range(start - 1, end))
+        else:
+            if not part.isdigit():
+                return None, "La lista de páginas no es válida. Usa el formato '1-3,5,7-9'."
+            n = int(part)
+            if n < 1:
+                return None, f"El rango debe empezar desde 1. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}."
+            if n > total_pages:
+                return None, f"El rango supera el número de páginas. El PDF tiene {total_pages} {'página' if total_pages == 1 else 'páginas'}."
+            result.append(n - 1)
+    if not result:
+        return None, "Indica el rango de páginas."
+    return result, None
+
+
+# ─── Recortar PDF (conservar páginas seleccionadas) ──────────────────
+
+@app.route("/recortar-pdf", methods=["GET", "POST"])
+def recortar_pdf():
+    if request.method == "GET":
+        return render_template("recortar_pdf.html")
+
+    # Recibir archivo
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("recortar_pdf.html", error="Selecciona un PDF para recortar.",
+                              range_value=request.form.get("range", ""))
+
+    if not allowed_file(file.filename):
+        return render_template("recortar_pdf.html", error="El archivo seleccionado no es un PDF.",
+                              range_value=request.form.get("range", ""))
+
+    # Validar tamaño del archivo
+    size_error = validate_file_size(file, "recortar_pdf.html")
+    if size_error:
+        return size_error
+
+    # Carpeta temporal única para esta petición
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+
+    try:
+        # Guardar archivo temporalmente con nombre único
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+
+        # Validar que sea un PDF real
+        if not validate_pdf(filepath):
+            return render_template("recortar_pdf.html", error="El archivo no se puede leer como PDF.",
+                                  range_value=request.form.get("range", ""))
+
+        reader = PdfReader(filepath)
+        total_pages = len(reader.pages)
+
+        # Obtener el rango de páginas a conservar (acepta varios nombres de campo)
+        range_raw = (
+            request.form.get("range")
+            or request.form.get("pages")
+            or request.form.get("rango")
+            or request.form.get("page_range")
+            or ""
+        ).strip()
+
+        indices, err = _parse_page_spec(range_raw, total_pages)
+        if err:
+            return render_template("recortar_pdf.html", error=err, range_value=range_raw)
+
+        # Generar el PDF con las páginas seleccionadas, en el orden indicado
+        writer = PdfWriter()
+        for idx in indices:
+            writer.add_page(reader.pages[idx])
+
+        output_path = os.path.join(temp_dir, "recortado.pdf")
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        return send_file(output_path, as_attachment=True, download_name="recortado.pdf")
+
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template("recortar_pdf.html", error=f"Error al recortar: {str(e)}",
+                              range_value=request.form.get("range", ""))
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── Reordenar páginas de PDF ────────────────────────────────────────
+
+@app.route("/reordenar-pdf", methods=["GET", "POST"])
+def reordenar_pdf():
+    if request.method == "GET":
+        return render_template("reordenar_pdf.html")
+
+    # Recibir archivo
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("reordenar_pdf.html", error="Selecciona un PDF para reordenar.",
+                              order_value=request.form.get("order", ""))
+
+    if not allowed_file(file.filename):
+        return render_template("reordenar_pdf.html", error="El archivo seleccionado no es un PDF.",
+                              order_value=request.form.get("order", ""))
+
+    # Validar tamaño del archivo
+    size_error = validate_file_size(file, "reordenar_pdf.html")
+    if size_error:
+        return size_error
+
+    # Carpeta temporal única para esta petición
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+
+    try:
+        # Guardar archivo temporalmente con nombre único
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+
+        # Validar que sea un PDF real
+        if not validate_pdf(filepath):
+            return render_template("reordenar_pdf.html", error="El archivo no se puede leer como PDF.",
+                                  order_value=request.form.get("order", ""))
+
+        reader = PdfReader(filepath)
+        total_pages = len(reader.pages)
+
+        # Obtener el nuevo orden (acepta varios nombres de campo)
+        order_raw = (
+            request.form.get("order")
+            or request.form.get("pages")
+            or request.form.get("orden")
+            or request.form.get("page_order")
+            or request.form.get("range")
+            or ""
+        ).strip()
+
+        indices, err = _parse_page_spec(order_raw, total_pages)
+        if err:
+            return render_template("reordenar_pdf.html", error=err, order_value=order_raw)
+
+        # Generar el PDF con las páginas en el orden indicado (duplicados permitidos)
+        writer = PdfWriter()
+        for idx in indices:
+            writer.add_page(reader.pages[idx])
+
+        output_path = os.path.join(temp_dir, "reordenado.pdf")
+        with open(output_path, "wb") as f:
+            writer.write(f)
+
+        return send_file(output_path, as_attachment=True, download_name="reordenado.pdf")
+
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template("reordenar_pdf.html", error=f"Error al reordenar: {str(e)}",
+                              order_value=request.form.get("order", ""))
     finally:
         cleanup_folder(temp_dir)
 

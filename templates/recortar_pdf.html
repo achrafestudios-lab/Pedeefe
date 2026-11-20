@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Recortar PDF{% endblock %}
+
+
+{% block meta_description %}Recorta un PDF conservando solo las páginas que elijas, procesando todo en tu máquina.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1>✂️ Recortar PDF</h1>
+    <p>Sube un PDF e indica las páginas que quieres conservar.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+        <br><small>Vuelve a seleccionar el archivo para reintentar (el navegador no conserva el archivo por seguridad).</small>
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('recortar_pdf') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="range">Páginas a conservar:</label>
+            <input type="text" name="range" id="range" placeholder="Ej: 1-3,5,7-9" value="{{ range_value or '' }}">
+            <small>Introduce las páginas o rangos separados por comas (ej: 1-3,5,7-9).</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Recortar PDF</button>
+    </form>
+</section>
+{% endblock %}
