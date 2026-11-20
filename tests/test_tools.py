@@ -582,6 +582,220 @@ class TestNumerarTools(TempUploadMixin, unittest.TestCase):
         assert_no_traceback(self, body)
 
 
+class TestRecortarTools(TempUploadMixin, unittest.TestCase):
+    def _pdf3(self):
+        return make_pdf_bytes(pages=3)
+
+    def test_get_200(self):
+        self.assertEqual(self.client.get("/recortar-pdf").status_code, 200)
+
+    def test_post_valid_range(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "2-3"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("recortado.pdf", resp.headers.get("Content-Disposition", ""))
+        self.assertTrue(resp.data.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 2)
+
+    def test_post_valid_comma(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "1,3"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 2)
+
+    def test_post_valid_single_page(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "2"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 1)
+
+    def test_post_preserves_order(self):
+        pdf = make_pdf_bytes(pages=3)
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "3,1"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 2)
+        t0 = reader.pages[0].extract_text() or ""
+        t1 = reader.pages[1].extract_text() or ""
+        self.assertIn("pagina 3", t0)
+        self.assertIn("pagina 1", t1)
+
+    def test_post_out_of_bounds_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "10-20"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("supera el número de páginas", body)
+        assert_no_traceback(self, body)
+
+    def test_post_inverted_range_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "3-1"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("inicio del rango no puede ser mayor", body)
+        assert_no_traceback(self, body)
+
+    def test_post_empty_range_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": ""}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("Indica el rango de páginas", body)
+        assert_no_traceback(self, body)
+
+    def test_post_invalid_token_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "range": "abc"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no es válida", body)
+        assert_no_traceback(self, body)
+
+    def test_post_missing_file_error(self):
+        resp = self.client.post("/recortar-pdf", data={"range": "1"}, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("Selecciona un PDF", body)
+        assert_no_traceback(self, body)
+
+    def test_post_corrupt_pdf_error(self):
+        data = {"file": (io.BytesIO(b"basura"), "a.pdf"), "range": "1"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no se puede leer como PDF", body)
+        assert_no_traceback(self, body)
+
+    def test_post_wrong_extension_error(self):
+        data = {"file": (io.BytesIO(b"x"), "a.txt"), "range": "1"}
+        resp = self.client.post("/recortar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no es un PDF", body)
+        assert_no_traceback(self, body)
+
+
+class TestReordenarTools(TempUploadMixin, unittest.TestCase):
+    def _pdf3(self):
+        return make_pdf_bytes(pages=3)
+
+    def test_get_200(self):
+        self.assertEqual(self.client.get("/reordenar-pdf").status_code, 200)
+
+    def test_post_valid_order(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "3,1,2"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("reordenado.pdf", resp.headers.get("Content-Disposition", ""))
+        self.assertTrue(resp.data.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 3)
+        texts = [ (p.extract_text() or "") for p in reader.pages ]
+        self.assertIn("pagina 3", texts[0])
+        self.assertIn("pagina 1", texts[1])
+        self.assertIn("pagina 2", texts[2])
+
+    def test_post_duplicates(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "1,1,2"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 3)
+        texts = [ (p.extract_text() or "") for p in reader.pages ]
+        self.assertIn("pagina 1", texts[0])
+        self.assertIn("pagina 1", texts[1])
+        self.assertIn("pagina 2", texts[2])
+
+    def test_post_range_in_order(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "3,1-2"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 3)
+
+    def test_post_single_page(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "2"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        reader = PdfReader(io.BytesIO(resp.data))
+        self.assertEqual(len(reader.pages), 1)
+
+    def test_post_out_of_bounds_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "5"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("supera el número de páginas", body)
+        assert_no_traceback(self, body)
+
+    def test_post_inverted_range_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "3-1"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("inicio del rango no puede ser mayor", body)
+        assert_no_traceback(self, body)
+
+    def test_post_empty_order_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": ""}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("Indica el rango de páginas", body)
+        assert_no_traceback(self, body)
+
+    def test_post_invalid_token_error(self):
+        pdf = self._pdf3()
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "order": "abc"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no es válida", body)
+        assert_no_traceback(self, body)
+
+    def test_post_missing_file_error(self):
+        resp = self.client.post("/reordenar-pdf", data={"order": "1"}, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("Selecciona un PDF", body)
+        assert_no_traceback(self, body)
+
+    def test_post_corrupt_pdf_error(self):
+        data = {"file": (io.BytesIO(b"basura"), "a.pdf"), "order": "1"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no se puede leer como PDF", body)
+        assert_no_traceback(self, body)
+
+    def test_post_wrong_extension_error(self):
+        data = {"file": (io.BytesIO(b"x"), "a.txt"), "order": "1"}
+        resp = self.client.post("/reordenar-pdf", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("no es un PDF", body)
+        assert_no_traceback(self, body)
+
+
 class TestOcrTools(TempUploadMixin, unittest.TestCase):
     def test_get_200(self):
         self.assertEqual(self.client.get("/ocr").status_code, 200)
