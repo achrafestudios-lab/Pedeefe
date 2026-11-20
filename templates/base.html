@@ -28,11 +28,12 @@
 
             {# Grupo: Optimizar PDF #}
             <div class="nav-group">
-                <button type="button" class="nav-group-toggle {% if request.endpoint in ['comprimir', 'ocr'] %}active{% endif %}"
+                <button type="button" class="nav-group-toggle {% if request.endpoint in ['comprimir', 'comprimir_real', 'ocr'] %}active{% endif %}"
                         data-group="optimizar" aria-expanded="false" aria-controls="panel-optimizar"
                         aria-haspopup="true">Optimizar PDF ▾</button>
                 <div class="nav-panel" id="panel-optimizar" hidden>
                     <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}><span aria-hidden="true">📦</span> Optimizar PDF</a>
+                    <a href="{{ url_for('comprimir_real') }}" {% if request.endpoint == 'comprimir_real' %}aria-current="page"{% endif %}><span aria-hidden="true">🗜️</span> Comprimir PDF</a>
                     <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}><span aria-hidden="true">🔍</span> OCR de PDF</a>
                 </div>
             </div>
@@ -92,6 +93,7 @@
                     <div class="nav-column">
                         <span class="nav-column-title">Optimizar PDF</span>
                         <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}><span aria-hidden="true">📦</span> Optimizar PDF</a>
+                        <a href="{{ url_for('comprimir_real') }}" {% if request.endpoint == 'comprimir_real' %}aria-current="page"{% endif %}><span aria-hidden="true">🗜️</span> Comprimir PDF</a>
                         <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}><span aria-hidden="true">🔍</span> OCR de PDF</a>
                     </div>
                     <div class="nav-column">
