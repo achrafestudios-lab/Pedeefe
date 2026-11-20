@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-223%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-248%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -50,6 +50,7 @@
 - [Para usuarios](#para-usuarios)
   - [App de escritorio (v1.9)](#opción-3-app-de-escritorio-v19)
   - [PWA instalable (v1.9)](#opción-4-pwa-instalable-v19)
+  - [API y CLI local (v2.0)](#opción-5-api-y-cli-local-v20)
 - [Instalación desde fuente](#instalación-desde-fuente)
 - [Requisitos del sistema](#requisitos-del-sistema)
 - [Formatos soportados](#formatos-soportados)
@@ -111,6 +112,9 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 - 📲 **PWA instalable (v1.9).** Instala la web como una app más en tu equipo desde
   `127.0.0.1` o `localhost`. Guarda solo la cáscara para abrirla sin servidor;
   las herramientas siguen necesitando el backend local.
+- 🤖 **API y CLI local (v2.0).** Automatiza 26 herramientas de procesamiento desde
+  scripts o la terminal, sobre el mismo backend de `127.0.0.1` y con un token
+  local. No abre otro puerto ni duplica la lógica de PDF.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
@@ -175,9 +179,9 @@ Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-1.9.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-1.9.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-1.9.0-mac-x64.dmg` / `Pedeefe-1.9.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.0.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.0.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.0.0-mac-x64.dmg` / `Pedeefe-2.0.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -203,7 +207,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.9.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.0.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -225,6 +229,46 @@ abre otro puerto, no crea cuentas y no envía datos a internet.
   descargas por token. Las páginas de herramientas siempre se piden a la red.
 - Los iconos y el manifiesto viven en `static/`; el service worker se sirve en
   `/sw.js` y el manifiesto en `/manifest.webmanifest`.
+
+### Opción 5: API y CLI local (v2.0)
+
+Con el backend local en marcha (web, Docker o escritorio) puedes automatizar el
+procesamiento desde un script o la terminal. La API comparte el servidor de
+`127.0.0.1:43210`: **no abre un puerto nuevo** y reutiliza los mismos handlers
+que la interfaz, así que no hay dos implementaciones que puedan divergir.
+
+El acceso exige un token local. Se crea automáticamente en `~/.pedeefe/token`
+(permisos `0600`, directorio `0700`) y se envía como `Authorization: Bearer`.
+Para automatizaciones también puedes definir `PEDEEFE_TOKEN` con el mismo valor
+en el backend y en el cliente, sin escribir nada en el perfil.
+
+```bash
+# CLI: catálogo y dos ejemplos
+.venv/bin/python cli/pedeefe.py list
+.venv/bin/python cli/pedeefe.py unir a.pdf b.pdf -o unido.pdf
+.venv/bin/python cli/pedeefe.py rotar a.pdf --angle 90 -o rotado.pdf
+
+# API: catálogo y una unión
+TOKEN=$(cat ~/.pedeefe/token)
+curl -H "Authorization: Bearer $TOKEN" http://127.0.0.1:43210/api/v1/tools
+curl -H "Authorization: Bearer $TOKEN" \
+  -F 'files=@a.pdf' -F 'files=@b.pdf' \
+  http://127.0.0.1:43210/api/v1/tools/unir -o unido.pdf
+```
+
+- `GET /api/v1/tools` devuelve las **26 herramientas de procesamiento**, con sus
+  campos de archivo y parámetros. «Historial» y «Plantillas» no aparecen: viven
+  solo en el navegador.
+- `POST /api/v1/tools/<slug>` devuelve el archivo resultante (`Content-Disposition`
+  con su nombre) o un JSON cuando la herramienta produce una página de texto,
+  como ocurre en «Comparar». Los errores de formulario son JSON con `ok: false`.
+- `pedeefe list` muestra los nombres de archivo y las opciones de cada
+  herramienta; `-o -` envía el resultado a stdout. El CLI usa solo la biblioteca
+  estándar de Python.
+- Los temporales siguen siendo efímeros y se borran tras la respuesta, igual que
+  en la web. Ningún archivo, contraseña ni resultado se guarda en la API.
+- La API escucha solo en loopback y exige el token: no sustituye a las
+  recomendaciones de red de la sección «Seguridad y privacidad».
 
 ### Requisitos mínimos
 
@@ -396,8 +440,11 @@ Notas de uso:
 | `GET`/`POST` | `/lotes` | Aplica una operación a varios PDFs y devuelve un ZIP |
 | `GET` | `/historial` | Historial local (solo en el navegador) |
 | `GET` | `/plantillas` | Plantillas reutilizables (solo en el navegador) |
+| `GET` | `/api/v1/tools` | Catálogo de la API local (requiere token) |
+| `POST` | `/api/v1/tools/<slug>` | Ejecuta una herramienta y devuelve archivo o JSON (requiere token) |
 
-Los archivos estáticos se sirven desde `/static/`.
+Los archivos estáticos se sirven desde `/static/`. En total son **39 rutas de
+aplicación**; `url_map` registra 40 porque Flask añade la regla de `/static/`.
 
 ---
 
@@ -442,6 +489,10 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
   «Desproteger», que usa la contraseña solo durante la petición.
 - El historial y las plantillas se guardan en el navegador, sin cookies ni
   identificadores de usuario, y nunca incluyen contraseñas.
+- La API local (v2.0) exige un token `Bearer` guardado en `~/.pedeefe/token` con
+  permisos `0600` (o pasado con `PEDEEFE_TOKEN`). No hay auth web, CSRF ni
+  rate limiting, así que la app sigue escuchando solo en `127.0.0.1`: no la
+  expongas a una red no confiable ni publiques el token.
 
 ---
 
@@ -451,7 +502,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 223 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 248 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -465,11 +516,13 @@ este entorno):
 | `tests/test_desktop.py` | Sidecar local, compatibilidad multiplataforma y targets del empaquetado |
 | `tests/test_dependencies.py` | Detección de motores externos y panel de la portada |
 | `tests/test_pwa.py` | Manifiesto, iconos, service worker y registro seguro |
+| `tests/test_api.py` | Token local, catálogo, ejecución de handlers y descargas por token desde la API |
+| `tests/test_cli.py` | Catálogo, reparto de archivos, parámetros, salida y errores del CLI |
 
 Comprobaciones adicionales:
 
 ```bash
-.venv/bin/python -m py_compile app.py desktop/launcher.py
+.venv/bin/python -m py_compile app.py local_token.py cli/pedeefe.py desktop/launcher.py
 .venv/bin/python -m pip check
 ```
 
@@ -508,7 +561,9 @@ docker compose down
 ## Estructura
 
 ```
-app.py                  Aplicación Flask: rutas, validación y procesamiento
+app.py                  Aplicación Flask: rutas, validación, procesamiento y API
+local_token.py          Token local compartido por backend y CLI (v2.0)
+cli/pedeefe.py          CLI local sobre la API JSON (v2.0)
 templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos con tokens claros/oscuros (v1.6)
 static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
@@ -517,8 +572,8 @@ static/js/sw.js         Service worker de la PWA (v1.9)
 static/manifest.json    Manifiesto de instalación (v1.9)
 static/offline.html     Página de aviso sin servidor local (v1.9)
 static/icons/           Iconos PNG de la PWA (v1.9)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.9)
-desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.9)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v2.0)
+desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v2.0)
 .github/workflows/desktop.yml  Build multiplataforma de los instaladores
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
@@ -539,6 +594,8 @@ docs/                   Documentación técnica interna (no publicada)
 | `FLASK_DEBUG` | `0` | Activa el debugger de Werkzeug si se pone a `1` |
 | `PYTHONUNBUFFERED` | `1` | Salida sin buffer en Docker |
 | `PEDEE_UPLOAD_FOLDER` | `uploads/` del repo | Directorio de temporales (lo fija el escritorio) |
+| `PEDEEFE_TOKEN` | `~/.pedeefe/token` | Token de la API local; debe coincidir en backend y CLI (v2.0) |
+| `PEDEEFE_URL` | `http://127.0.0.1:43210` | URL base que usa el CLI (v2.0) |
 
 ---
 
@@ -598,6 +655,16 @@ accesible desde otros equipos y se cierra al salir de la aplicación.
 No. La PWA guarda solo la interfaz para abrirla y mostrar un aviso si el backend
 no está en marcha. Los PDF se procesan siempre en local con Flask.
 
+**¿Puedo automatizar Pedeefe desde un script?**
+Sí. Con el backend en marcha, usa `python cli/pedeefe.py list` para ver las 26
+herramientas disponibles y la API `POST /api/v1/tools/<slug>` desde cualquier
+lenguaje. Todo sigue en `127.0.0.1` y con el mismo token local.
+
+**¿Dónde se guarda el token de la API?**
+En `~/.pedeefe/token`, con permisos restringidos. Si prefieres no crear ese
+archivo, define `PEDEEFE_TOKEN` antes de arrancar el backend y pasa el mismo
+valor al CLI. No compartas el token ni expongas la API fuera de tu equipo.
+
 **¿Qué pasa si un PDF está protegido?**
 Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
@@ -620,10 +687,29 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | Página de error 413 | Subida mayor al límite | Selecciona un archivo más pequeño |
 | El navegador no ofrece «Instalar aplicación» | Contexto no seguro o navegador sin soporte | Abre `127.0.0.1`/`localhost` (o HTTPS) en Chrome/Edge; desde una IP de LAN la PWA no se registra |
 | La PWA muestra «no está disponible» | El servidor Flask local no está en marcha | Inicia la app web y pulsa «Reintentar» |
+| CLI: `Token de API local no válido` | El token del CLI no coincide con el del backend | Usa el mismo `PEDEEFE_TOKEN` en ambos o el archivo `~/.pedeefe/token` |
+| CLI: `No se pudo conectar con el backend local` | La app no está arrancada o `PEDEEFE_URL` es incorrecto | Inicia Pedeefe y comprueba la URL (por defecto `http://127.0.0.1:43210`) |
+| API: `401` con el token correcto | El backend se arrancó con otro `PEDEEFE_TOKEN` | Reinicia el backend con el mismo valor que usa el cliente |
 
 ---
 
 ## Changelog
+
+### v2.0 (API y CLI local)
+
+- **API JSON local** en `GET /api/v1/tools` y `POST /api/v1/tools/<slug>`, sobre
+  el mismo servidor Flask de `127.0.0.1`: sin puertos nuevos y sin duplicar la
+  lógica de los handlers web. Catálogo de 26 herramientas de procesamiento;
+  «Historial» y «Plantillas» siguen siendo solo del navegador.
+- **Token local `0600`** en `~/.pedeefe/token`, con `PEDEEFE_TOKEN` como
+  alternativa para tests y automatizaciones. La API devuelve el archivo
+  resultante o JSON y sigue las descargas por token sin dejar temporales.
+- **CLI local** (`cli/pedeefe.py`) con `list` y un subcomando por herramienta,
+  multipart con la biblioteca estándar, salida a archivo o stdout y errores en
+  stderr. Sin dependencias Python nuevas.
+- **25 tests nuevos** (248 en total): autenticación, catálogo, ejecución y
+  descargas de la API; catálogo, reparto de archivos y salida del CLI. Los
+  instaladores de escritorio se regeneran como `2.0.0`.
 
 ### v1.9 (PWA instalable)
 
@@ -742,12 +828,13 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.6 | Accesibilidad WCAG 2.1 AA y tema oscuro | Completada |
 | v1.7 | Plataforma: app de escritorio (Linux) | Completada |
 | v1.8 | Windows y macOS del escritorio | Completada |
-| v1.9 | PWA instalable | Completada (API/CLI local diferida) |
+| v1.9 | PWA instalable | Completada |
+| v2.0 | API y CLI local | Completada |
 
-v1.9 añade una PWA que se instala desde `localhost` sin exponer nuevos servicios
-de red: el backend sigue enlazando solo `127.0.0.1` y el service worker no cachea
-archivos ni resultados. La API/CLI local queda diferida. Línea opcional de
-*PDF Intelligence*: resumen con IA, traducción y exportación a Markdown.
+v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
+propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
+opcional de *PDF Intelligence*: resumen con IA, traducción y exportación a
+Markdown.
 
 ---
 
@@ -762,6 +849,7 @@ archivos ni resultados. La API/CLI local queda diferida. Línea opcional de
 | Interfaz en español | Sí | Sí | Sí | Sí | No |
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
+| API/CLI local | Sí | No | No | No | Sí |
 | 28 herramientas | Sí | Parcial | Parcial | Parcial | No |
 
 **Diferenciador clave:** Pedeefe es una caja de herramientas PDF en español,
@@ -790,16 +878,17 @@ Pedeefe se construye sobre proyecto open source:
 
 | Métrica | Valor |
 |---|---|
-| Herramientas | 28 |
-| Rutas HTTP | 37 |
+| Herramientas web | 28 (26 expuestas en la API local) |
+| Rutas HTTP | 39 de aplicación (40 reglas en `url_map`) |
 | Plantillas Jinja2 | 31 |
-| Tests | 223 (1 omitido) |
-| Líneas de `app.py` | ~2.810 |
-| Dependencias Python | 15 (sin cambios en v1.9) |
+| Tests | 248 (1 omitido) |
+| Líneas de `app.py` | ~3.080 |
+| Dependencias Python | 15 (sin cambios en v2.0) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
-| Versión actual | 1.9 |
+| API/CLI | Local, solo loopback, con token `0600` |
+| Versión actual | 2.0 |
 
 ---
 
@@ -809,7 +898,8 @@ Pedeefe se construye sobre proyecto open source:
 2. Crea una rama: `git checkout -b feature/mi-mejora`.
 3. Haz tus cambios respetando las convenciones del proyecto.
 4. Ejecuta los tests: `.venv/bin/python -m unittest discover -s tests`.
-5. Comprueba la sintaxis: `.venv/bin/python -m py_compile app.py`.
+5. Comprueba la sintaxis:
+   `.venv/bin/python -m py_compile app.py local_token.py cli/pedeefe.py`.
 6. Commitea y haz push.
 7. Abre un Pull Request.
 

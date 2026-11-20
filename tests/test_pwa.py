@@ -98,7 +98,7 @@ class TestServiceWorker(unittest.TestCase):
         ):
             with self.subTest(asset=asset):
                 self.assertIn(f'"{asset}"', self.source)
-        self.assertIn("pedeefe-v1.9.0", self.source)
+        self.assertIn("pedeefe-v2.0.0", self.source)
 
     def test_worker_never_intercepts_downloads_or_external_urls(self):
         self.assertIn('url.pathname.startsWith("/descargar_")', self.source)

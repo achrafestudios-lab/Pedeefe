@@ -7,7 +7,9 @@ import subprocess
 import zipfile
 import difflib
 from io import BytesIO
-from flask import Flask, render_template, request, send_file, abort
+from html import unescape
+from flask import Flask, render_template, request, send_file, abort, jsonify, make_response, Response
+from local_token import get_or_create_api_token
 from pypdf import PdfReader, PdfWriter
 import pikepdf
 # pdf2image requiere Poppler instalado en el sistema:
@@ -2807,6 +2809,265 @@ def plantillas():
         template_days=TEMPLATE_TTL_DAYS,
         template_max=TEMPLATE_MAX_ENTRIES,
     )
+
+
+# ─── API local JSON y CLI (v2.0) ──────────────────────────────────────
+# La API comparte el único servidor Flask enlazado a 127.0.0.1: no abre puertos
+# nuevos. Reutiliza los handlers web mediante un contexto de petición
+# sintético, de modo que la lógica de procesamiento no se duplica y la API y la
+# interfaz no puedan divergir. Toda petición exige el token local del perfil.
+
+
+def _api_file(name, multiple=False, required=True):
+    return {"name": name, "multiple": multiple, "required": required}
+
+
+API_TOOLS = {
+    "unir": {
+        "label": "Unir PDFs", "endpoint": "unir", "route": "/unir",
+        "files": [_api_file("files", multiple=True)], "params": [],
+    },
+    "dividir": {
+        "label": "Dividir PDF", "endpoint": "dividir", "route": "/dividir",
+        "files": [_api_file("file")], "params": ["mode", "range"],
+    },
+    "comprimir": {
+        "label": "Optimizar PDF", "endpoint": "comprimir", "route": "/comprimir",
+        "files": [_api_file("file")], "params": [],
+    },
+    "comprimir-real": {
+        "label": "Comprimir con Ghostscript", "endpoint": "comprimir_real",
+        "route": "/comprimir-real", "files": [_api_file("file")], "params": [],
+    },
+    "pdf-a-imagen": {
+        "label": "PDF a imagen", "endpoint": "pdf_a_imagen",
+        "route": "/pdf-a-imagen", "files": [_api_file("file")], "params": ["format"],
+    },
+    "imagen-a-pdf": {
+        "label": "Imágenes a PDF", "endpoint": "imagen_a_pdf",
+        "route": "/imagen-a-pdf", "files": [_api_file("files", multiple=True)],
+        "params": [],
+    },
+    "pdf-a-word": {
+        "label": "PDF a Word", "endpoint": "pdf_a_word", "route": "/pdf-a-word",
+        "files": [_api_file("file")], "params": [],
+    },
+    "rotar": {
+        "label": "Rotar PDF", "endpoint": "rotar", "route": "/rotar",
+        "files": [_api_file("file")], "params": ["angle"],
+    },
+    "proteger": {
+        "label": "Proteger PDF", "endpoint": "proteger", "route": "/proteger",
+        "files": [_api_file("file")], "params": ["password", "password_confirm"],
+    },
+    "desproteger": {
+        "label": "Desproteger PDF", "endpoint": "desproteger",
+        "route": "/desproteger", "files": [_api_file("file")], "params": ["password"],
+    },
+    "ocr": {
+        "label": "OCR", "endpoint": "ocr", "route": "/ocr",
+        "files": [_api_file("file")], "params": [],
+    },
+    "marcar-agua": {
+        "label": "Marcar con agua", "endpoint": "marcar_agua",
+        "route": "/marcar-agua", "files": [_api_file("file")],
+        "params": ["watermark_text"],
+    },
+    "numerar": {
+        "label": "Numerar páginas", "endpoint": "numerar", "route": "/numerar",
+        "files": [_api_file("file")], "params": ["position", "start_num"],
+    },
+    "recortar-pdf": {
+        "label": "Recortar PDF", "endpoint": "recortar_pdf",
+        "route": "/recortar-pdf", "files": [_api_file("file")], "params": ["range"],
+    },
+    "reordenar-pdf": {
+        "label": "Reordenar páginas", "endpoint": "reordenar_pdf",
+        "route": "/reordenar-pdf", "files": [_api_file("file")], "params": ["order"],
+    },
+    "pdf-a-excel": {
+        "label": "PDF a Excel", "endpoint": "pdf_a_excel",
+        "route": "/pdf-a-excel", "files": [_api_file("file")], "params": [],
+    },
+    "pdf-a-powerpoint": {
+        "label": "PDF a PowerPoint", "endpoint": "pdf_a_powerpoint",
+        "route": "/pdf-a-powerpoint", "files": [_api_file("file")], "params": [],
+    },
+    "pdf-a-html": {
+        "label": "PDF a HTML", "endpoint": "pdf_a_html",
+        "route": "/pdf-a-html", "files": [_api_file("file")], "params": [],
+    },
+    "word-a-pdf": {
+        "label": "Word a PDF", "endpoint": "word_a_pdf",
+        "route": "/word-a-pdf", "files": [_api_file("file")], "params": [],
+    },
+    "excel-a-pdf": {
+        "label": "Excel a PDF", "endpoint": "excel_a_pdf",
+        "route": "/excel-a-pdf", "files": [_api_file("file")], "params": [],
+    },
+    "powerpoint-a-pdf": {
+        "label": "PowerPoint a PDF", "endpoint": "powerpoint_a_pdf",
+        "route": "/powerpoint-a-pdf", "files": [_api_file("file")], "params": [],
+    },
+    "html-a-pdf": {
+        "label": "HTML a PDF", "endpoint": "html_a_pdf",
+        "route": "/html-a-pdf", "files": [_api_file("file", required=False)],
+        "params": ["html_text"],
+    },
+    "firmar": {
+        "label": "Firmar PDF", "endpoint": "firmar", "route": "/firmar",
+        "files": [_api_file("file"), _api_file("certificate")], "params": ["password"],
+    },
+    "censurar": {
+        "label": "Censurar PDF", "endpoint": "censurar", "route": "/censurar",
+        "files": [_api_file("file")], "params": ["terms"],
+    },
+    "comparar": {
+        "label": "Comparar PDFs", "endpoint": "comparar", "route": "/comparar",
+        "files": [_api_file("file1"), _api_file("file2")], "params": [],
+    },
+    "lotes": {
+        "label": "Procesar lote", "endpoint": "lotes", "route": "/lotes",
+        "files": [_api_file("files", multiple=True)],
+        "params": ["operation", "angle", "password", "password_confirm",
+                   "watermark_text", "position", "start_num"],
+    },
+}
+
+
+@app.before_request
+def _require_local_api_token():
+    """La API exige el token local; el resto de rutas no cambian."""
+    if not request.path.startswith("/api/"):
+        return None
+    expected = get_or_create_api_token()
+    if request.headers.get("Authorization", "") != "Bearer " + expected:
+        return jsonify({"ok": False, "error": "Token de API local no válido."}), 401
+    return None
+
+
+def _api_forward_data():
+    """Copia archivos y campos de la petición API al contexto de la web."""
+    data = {}
+    for key in request.form.keys():
+        values = request.form.getlist(key)
+        data[key] = values if len(values) > 1 else values[0]
+    for key in request.files.keys():
+        values = request.files.getlist(key)
+        data[key] = values if len(values) > 1 else values[0]
+    return data
+
+
+def _api_html_error(html):
+    """Extrae el mensaje de error que la plantilla web habría mostrado."""
+    pattern = r'class="alert alert-error"[^>]*>\s*(.*?)\s*</div>'
+    match = re.search(pattern, html, re.S)
+    if not match:
+        match = re.search(r'<section class="error-page">.*?<p>(.*?)</p>', html, re.S)
+    if not match:
+        return None
+    return unescape(re.sub(r"<[^>]+>", "", match.group(1))).strip() or None
+
+
+def _api_html_download(html):
+    """Sigue el enlace de descarga por token que renderiza la web."""
+    match = re.search(
+        r'href="(/descargar_[a-z_]+/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-'
+        r'[0-9a-f]{4}-[0-9a-f]{12})"',
+        html,
+    )
+    if not match:
+        return None
+    return app.test_client().get(match.group(1))
+
+
+def _response_body(response):
+    """Lee el cuerpo de un send_file, que usa direct_passthrough por defecto."""
+    try:
+        if response.direct_passthrough:
+            response.direct_passthrough = False
+        return response.get_data()
+    finally:
+        response.close()
+
+
+def _api_file_response(source, slug, body):
+    """Devuelve el binario con el nombre que la web habría descargado."""
+    header = source.headers.get("Content-Disposition", "")
+    match = re.search(r'filename="?([^";]+)"?', header)
+    download_name = match.group(1) if match else slug + ".bin"
+    response = make_response(body)
+    response.headers["Content-Type"] = source.mimetype or "application/octet-stream"
+    response.headers["Content-Disposition"] = (
+        'attachment; filename="' + os.path.basename(download_name) + '"'
+    )
+    response.headers["X-Pedeefe-Format"] = "file"
+    response.headers["X-Pedeefe-Tool"] = slug
+    return response
+
+
+def _api_convert_response(web_response, slug):
+    """Convierte la respuesta web en JSON o en el archivo resultante."""
+    if isinstance(web_response, str):
+        # render_template devuelve str cuando se llama al handler directamente.
+        web_response = Response(web_response, mimetype="text/html")
+    if web_response.status_code != 200:
+        return jsonify({"ok": False, "error": "No se pudo procesar la petición."}), \
+            web_response.status_code
+
+    if web_response.mimetype != "text/html":
+        return _api_file_response(web_response, slug, _response_body(web_response))
+
+    html = web_response.get_data(as_text=True)
+    error = _api_html_error(html)
+    if error:
+        return jsonify({"ok": False, "error": error}), 400
+
+    download = _api_html_download(html)
+    if download is not None:
+        if download.status_code != 200:
+            return jsonify({
+                "ok": False,
+                "error": "El resultado ya no está disponible.",
+            }), 404
+        return _api_file_response(download, slug, _response_body(download))
+
+    return jsonify({"ok": True, "tool": slug, "format": "html", "content": html})
+
+
+@app.route("/api/v1/tools", methods=["GET"])
+def api_tools():
+    """Catálogo de herramientas disponibles para el CLI y scripts locales."""
+    tools = []
+    for slug, spec in API_TOOLS.items():
+        tools.append({
+            "slug": slug,
+            "label": spec["label"],
+            "files": spec["files"],
+            "params": spec["params"],
+        })
+    return jsonify({
+        "ok": True,
+        "version": "2.0.0",
+        "count": len(tools),
+        "tools": tools,
+    })
+
+
+@app.route("/api/v1/tools/<slug>", methods=["POST"])
+def api_run_tool(slug):
+    """Ejecuta una herramienta web y devuelve su archivo o un JSON."""
+    spec = API_TOOLS.get(slug)
+    if spec is None:
+        return jsonify({"ok": False, "error": f"Herramienta desconocida: {slug}"}), 404
+
+    data = _api_forward_data()
+    try:
+        with app.test_request_context(spec["route"], method="POST", data=data):
+            web_response = app.view_functions[spec["endpoint"]]()
+        return _api_convert_response(web_response, slug)
+    except Exception as exc:  # pragma: no cover — mensaje accionable al cliente
+        return jsonify({"ok": False, "error": str(exc)}), 500
 
 
 if __name__ == "__main__":

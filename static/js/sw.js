@@ -4,7 +4,7 @@
 // necesitando el backend Flask en 127.0.0.1.
 "use strict";
 
-const CACHE_NAME = "pedeefe-v1.9.0";
+const CACHE_NAME = "pedeefe-v2.0.0";
 const OFFLINE_URL = "/static/offline.html";
 const APP_SHELL = [
     "/",

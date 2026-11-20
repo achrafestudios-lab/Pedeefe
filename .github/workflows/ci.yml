@@ -33,7 +33,7 @@ jobs:
         run: python -m pip check
 
       - name: Comprobar sintaxis
-        run: python -m py_compile app.py
+        run: python -m py_compile app.py local_token.py cli/pedeefe.py desktop/launcher.py
 
       - name: Ejecutar tests
         run: python -m unittest discover -s tests

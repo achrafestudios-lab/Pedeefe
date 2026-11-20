@@ -23,11 +23,13 @@ a = Analysis(
     binaries=[],
     datas=[
         (str(root / "app.py"), "."),
+        (str(root / "local_token.py"), "."),
         (str(root / "templates"), "templates"),
         (str(root / "static"), "static"),
     ],
     hiddenimports=[
         "app",
+        "local_token",
         "pikepdf",
         "fitz",
         "pymupdf",
