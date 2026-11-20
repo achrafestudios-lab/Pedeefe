@@ -254,6 +254,55 @@
     }
 })();
 
+// v2.2: filtro local de herramientas por categoría. Solo lee el DOM, oculta
+// tarjetas y actualiza ARIA; no envía nada a ningún servidor ni guarda nada.
+(function () {
+    "use strict";
+
+    function initToolFilter() {
+        const buttons = Array.from(document.querySelectorAll(".tools__filter [data-filter]"));
+        if (buttons.length === 0) {
+            return;
+        }
+        const cards = Array.from(document.querySelectorAll("[data-tool-card]"));
+        const status = document.getElementById("tool-filter-status");
+
+        function applyFilter(selected) {
+            let visible = 0;
+
+            buttons.forEach(function (button) {
+                const active = button.dataset.filter === selected;
+                button.classList.toggle("active", active);
+                button.setAttribute("aria-pressed", active ? "true" : "false");
+            });
+
+            cards.forEach(function (card) {
+                const match = selected === "all" || card.dataset.category === selected;
+                card.hidden = !match;
+                if (match) visible += 1;
+            });
+
+            if (status) {
+                status.textContent = selected === "all"
+                    ? ""
+                    : visible + (visible === 1 ? " herramienta disponible." : " herramientas disponibles.");
+            }
+        }
+
+        buttons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                applyFilter(button.dataset.filter);
+            });
+        });
+    }
+
+    if (document.readyState === "loading") {
+        document.addEventListener("DOMContentLoaded", initToolFilter);
+    } else {
+        initToolFilter();
+    }
+})();
+
 // v1.9: registrar la PWA solo en contextos seguros (localhost/HTTPS) y nunca
 // dentro de Electron, donde el backend ya se entrega como aplicación nativa.
 (function () {

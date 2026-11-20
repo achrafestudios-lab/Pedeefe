@@ -4,7 +4,7 @@
 // necesitando el backend Flask en 127.0.0.1.
 "use strict";
 
-const CACHE_NAME = "pedeefe-v2.0.1";
+const CACHE_NAME = "pedeefe-v2.3-ui";
 const OFFLINE_URL = "/static/offline.html";
 const APP_SHELL = [
     "/",
@@ -16,6 +16,39 @@ const APP_SHELL = [
     "/static/icons/icon-192.png",
     "/static/icons/icon-512.png",
     "/static/icons/icon-maskable-512.png",
+    "/static/brand/pedeefe-logo-horizontal.svg",
+    "/static/brand/pedeefe-logo-modo-oscuro.svg",
+    "/static/brand/pedeefe-logo-monocromo-horizontal.svg",
+    "/static/brand/pedeefe-icono-app.svg",
+    "/static/img/background.svg",
+    "/static/icons/tools/censurar.svg",
+    "/static/icons/tools/comparar.svg",
+    "/static/icons/tools/comprimir.svg",
+    "/static/icons/tools/comprimir_real.svg",
+    "/static/icons/tools/desproteger.svg",
+    "/static/icons/tools/dividir.svg",
+    "/static/icons/tools/excel_a_pdf.svg",
+    "/static/icons/tools/firmar.svg",
+    "/static/icons/tools/historial.svg",
+    "/static/icons/tools/html_a_pdf.svg",
+    "/static/icons/tools/imagen_a_pdf.svg",
+    "/static/icons/tools/lotes.svg",
+    "/static/icons/tools/marcar_agua.svg",
+    "/static/icons/tools/numerar.svg",
+    "/static/icons/tools/ocr.svg",
+    "/static/icons/tools/pdf_a_excel.svg",
+    "/static/icons/tools/pdf_a_html.svg",
+    "/static/icons/tools/pdf_a_imagen.svg",
+    "/static/icons/tools/pdf_a_powerpoint.svg",
+    "/static/icons/tools/pdf_a_word.svg",
+    "/static/icons/tools/plantillas.svg",
+    "/static/icons/tools/powerpoint_a_pdf.svg",
+    "/static/icons/tools/proteger.svg",
+    "/static/icons/tools/recortar_pdf.svg",
+    "/static/icons/tools/reordenar_pdf.svg",
+    "/static/icons/tools/rotar.svg",
+    "/static/icons/tools/unir.svg",
+    "/static/icons/tools/word_a_pdf.svg",
 ];
 
 self.addEventListener("install", function (event) {

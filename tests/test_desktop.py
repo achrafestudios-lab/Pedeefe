@@ -188,7 +188,7 @@ class TestDesktopSidecar(unittest.TestCase):
                 with opener.open(f"http://127.0.0.1:{port}/", timeout=5) as response:
                     body = response.read().decode("utf-8", "replace")
                     self.assertEqual(response.status, 200)
-                self.assertIn("Manipula tus PDFs de forma local", body)
+                self.assertIn("Todas las herramientas PDF que necesitas", body)
                 self.assertEqual(os.listdir(upload_dir), [])
             finally:
                 proc.terminate()

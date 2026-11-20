@@ -39,7 +39,7 @@ class TestPWAManifest(unittest.TestCase):
         self.assertEqual(manifest["start_url"], "/")
         self.assertEqual(manifest["scope"], "/")
         self.assertEqual(manifest["display"], "standalone")
-        self.assertEqual(manifest["theme_color"], "#e31937")
+        self.assertEqual(manifest["theme_color"], "#DE2B3F")
 
     def test_icons_are_local_and_have_required_sizes(self):
         icons = self.manifest["icons"]
@@ -98,7 +98,7 @@ class TestServiceWorker(unittest.TestCase):
         ):
             with self.subTest(asset=asset):
                 self.assertIn(f'"{asset}"', self.source)
-        self.assertIn("pedeefe-v2.0.1", self.source)
+        self.assertIn("pedeefe-v2.3", self.source)
 
     def test_worker_never_intercepts_downloads_or_external_urls(self):
         self.assertIn('url.pathname.startsWith("/descargar_")', self.source)
