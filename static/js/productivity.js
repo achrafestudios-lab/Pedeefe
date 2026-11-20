@@ -193,6 +193,14 @@
         }
     }
 
+    // WCAG 4.1.3: los cambios de la lista se anuncian sin mover el foco.
+    function announce(message) {
+        var status = document.getElementById("productivity-status");
+        if (status) {
+            status.textContent = message;
+        }
+    }
+
     function summary(params) {
         var keys = params && typeof params === "object" ? Object.keys(params) : [];
         if (!keys.length) {
@@ -373,6 +381,7 @@
                 status.textContent = saved
                     ? "Plantilla guardada en este navegador."
                     : "No se pudo guardar. Revisa el almacenamiento del navegador.";
+                announce(status.textContent);
                 if (saved) {
                     input.value = "";
                     panel.hidden = true;
@@ -397,6 +406,7 @@
             write(key, remaining);
             renderHistory();
             renderTemplates();
+            announce("Entrada eliminada.");
         });
 
         var clearHistory = document.getElementById("history-clear");
@@ -405,6 +415,7 @@
                 if (window.confirm("¿Borrar todo el historial guardado en este navegador?")) {
                     write(HISTORY_KEY, []);
                     renderHistory();
+                    announce("Historial borrado.");
                 }
             });
         }
@@ -414,6 +425,7 @@
                 if (window.confirm("¿Borrar todas las plantillas guardadas en este navegador?")) {
                     write(TEMPLATE_KEY, []);
                     renderTemplates();
+                    announce("Plantillas borradas.");
                 }
             });
         }

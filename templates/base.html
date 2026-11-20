@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light dark">
     <meta name="description" content="{% block meta_description %}Pedeefe: herramientas para manipular PDFs en local. Une, divide, optimiza, convierte, rota, protege y numera PDFs sin subir archivos a internet.{% endblock %}">
     <title>{% block title %}Pedeefe{% endblock %} - Herramientas PDF</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <a class="skip-link" href="#main-content">Saltar al contenido principal</a>
     <nav class="navbar" aria-label="Principal">
         <a href="{{ url_for('index') }}" class="logo"><span aria-hidden="true">📄</span> Pedeefe</a>
         <button type="button" class="nav-toggle" id="navToggle"
@@ -182,6 +184,8 @@
     <footer class="footer" role="contentinfo">
         <p>Pedeefe — Manipula PDFs de forma local, sin subir nada a internet.</p>
     </footer>
+
+    <p id="productivity-status" class="visually-hidden" role="status" aria-live="polite"></p>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script src="{{ url_for('static', filename='js/productivity.js') }}"></script>

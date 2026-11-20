@@ -16,7 +16,7 @@
 
     {% if success %}
     <div class="result-box">
-        <h2>✅ Conversión completada</h2>
+        <h2><span aria-hidden="true">✅</span> Conversión completada</h2>
         <a href="{{ url_for('descargar_powerpoint', token=download_token) }}" class="btn btn-primary">
             Descargar .pptx
         </a>

@@ -16,7 +16,7 @@
 
     {% if success %}
     <div class="result-box">
-        <h2>✅ Conversión completada</h2>
+        <h2><span aria-hidden="true">✅</span> Conversión completada</h2>
         <a href="{{ url_for('descargar_pdf_convertido', token=download_token) }}" class="btn btn-primary">
             Descargar .pdf
         </a>
@@ -31,7 +31,11 @@
         <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
         <div id="fileList" class="file-list"></div>
 
-        <textarea name="html_text" rows="6" placeholder="O pega aquí tu HTML..." style="width:100%;margin:1rem 0;"></textarea>
+        <div class="form-field">
+            <label for="html_text">Pega aquí tu HTML (alternativa al archivo)</label>
+            <textarea name="html_text" id="html_text" rows="6"
+                      placeholder="&lt;h1&gt;Título&lt;/h1&gt;&lt;p&gt;Contenido&lt;/p&gt;"></textarea>
+        </div>
 
         <button type="submit" class="btn btn-primary" id="submitBtn">Convertir a PDF</button>
     </form>
@@ -45,7 +49,7 @@
         const submitBtn = document.getElementById("submitBtn");
         fileInput.addEventListener("change", updateFileList);
         function updateFileList() {
-            fileList.innerHTML = "";
+            fileList.textContent = "";
             const files = fileInput.files;
             if (files.length === 0) { submitBtn.disabled = false; return; }
             for (const file of files) {

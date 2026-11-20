@@ -27,7 +27,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/tests-183%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-197%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -98,8 +98,10 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   imágenes, además de imágenes → PDF.
 - ✍️ **Firma, censura y comparación.** Firma criptográfica con certificado
   PKCS#12, borrado real de texto y diferencias página a página.
-- ♿ **Accesible.** Navegación por grupos, manejo por teclado, foco visible,
-  mensajes de error claros y contraste mejorado.
+- ♿ **Accesible y con tema oscuro.** Navegación por grupos, manejo por teclado,
+  foco visible, enlace «Saltar al contenido principal», mensajes anunciados a
+  lectores de pantalla y contraste AA. El tema oscuro sigue la preferencia del
+  sistema, sin interruptor ni datos guardados.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
@@ -372,7 +374,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 183 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 197 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -382,6 +384,7 @@ este entorno):
 | `tests/test_fase4.py` | Conversiones a y desde Office/HTML |
 | `tests/test_fase5.py` | Firma real, censura y comparación de texto |
 | `tests/test_fase6.py` | Lotes con ZIP, límites, errores y páginas de productividad |
+| `tests/test_a11y.py` | Accesibilidad, tema oscuro y regresiones de contraste |
 
 Comprobaciones adicionales:
 
@@ -427,10 +430,10 @@ docker compose down
 ```
 app.py                  Aplicación Flask: rutas, validación y procesamiento
 templates/              Plantillas Jinja2 (interfaz en español)
-static/css/style.css    Estilos
+static/css/style.css    Estilos con tokens claros/oscuros (v1.6)
 static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
 static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4 y v1.5)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.6)
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
 requirements.txt        Dependencias Python
@@ -522,6 +525,18 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v1.6 (accesibilidad y tema oscuro)
+- **Tema oscuro** automático según la preferencia del sistema
+  (`prefers-color-scheme`), implementado con tokens CSS y contraste AA verificado
+  en tema claro y oscuro. Lighthouse accesibilidad **1,00** en las páginas
+  auditadas, también en modo oscuro.
+- **Accesibilidad:** enlace «Saltar al contenido principal», foco visible con
+  anillo de contraste, región de anuncios para los cambios de historial y
+  plantillas, etiqueta en el editor HTML y emojis de encabezado ocultos a
+  lectores de pantalla.
+- Sin dependencias nuevas ni superficie de red adicional: la app sigue escuchando
+  solo en `127.0.0.1`. 14 tests nuevos (197 en total).
+
 ### v1.5 (Fase 6)
 - **Lotes PDF**: una misma operación sobre varios PDF con descarga en ZIP.
   Operaciones: rotar, optimizar, proteger, desproteger, marcar con agua y numerar.
@@ -580,10 +595,12 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.3 | Conversión PDF ↔ Office/HTML | Completada |
 | v1.4 | Seguridad avanzada: firmar, censurar, comparar | Completada |
 | v1.5 | Productividad: lotes, historial y plantillas | Completada |
-| v1.6 | Plataforma: escritorio, API local y accesibilidad completa | Planificada |
+| v1.6 | Accesibilidad WCAG 2.1 AA y tema oscuro | Completada |
+| v1.7 | Plataforma: app de escritorio y API local | Planificada (diferida) |
 
-Línea opcional de *PDF Intelligence*: resumen con IA, traducción y exportación
-a Markdown.
+El escritorio, la API/CLI local y la PWA quedan fuera de v1.6: la app continúa
+siendo local y no expone nuevos servicios de red. Línea opcional de *PDF
+Intelligence*: resumen con IA, traducción y exportación a Markdown.
 
 ---
 
@@ -629,11 +646,11 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas | 28 |
 | Rutas HTTP | 35 |
 | Plantillas Jinja2 | 31 |
-| Tests | 183 (1 omitido) |
+| Tests | 197 (1 omitido) |
 | Líneas de `app.py` | ~2.700 |
-| Dependencias Python | 15 (sin cambios en v1.5) |
+| Dependencias Python | 15 (sin cambios en v1.6) |
 | Puerto por defecto | 43210 |
-| Versión actual | 1.5 |
+| Versión actual | 1.6 |
 
 ---
 

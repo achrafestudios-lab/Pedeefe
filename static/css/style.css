@@ -1,33 +1,53 @@
-/* ─── Tokens (R-21) ─────────────────────────────────────────────── */
+/* ─── Tokens (R-21; v1.6: tema claro y oscuro) ──────────────────── */
 :root {
-    /* Colores */
+    color-scheme: light;
+
+    /* Colores de marca */
     --color-primary: #e31937;
     --color-primary-dark: #c41430;
     --color-primary-light: #fff5f5;
-    --color-text: #333;
-    --color-text-light: #666;
+    --color-on-primary: #ffffff;
+    --color-nav-bg: #e31937;
+    --color-nav-text: #ffffff;
+
+    /* Texto y superficies */
+    --color-text: #333333;
+    --color-text-light: #595959;
     --color-text-muted: #595959;
     --color-border: #767676;
-    --color-border-light: #e0e0e0;
-    --color-border-lighter: #eee;
+    --color-border-light: #d9d9d9;
+    --color-border-lighter: #e6e6e6;
     --color-bg: #f5f5f5;
+    --color-bg-alt: #f4f4f4;
     --color-surface: #ffffff;
     --color-surface-alt: #f9f9f9;
+
+    /* Estados */
     --color-success: #15803d;
     --color-success-bg: #f0fdf4;
     --color-success-border: #bbf7d0;
-    --color-error: #c41430;
+    --color-error: #b3122c;
     --color-error-bg: #fdecea;
     --color-error-border: #f5c6cb;
-    --color-warning: #856404;
+    --color-warning: #745500;
     --color-warning-bg: #fff8e1;
     --color-warning-border: #ffeeba;
     --color-loading-border: #f59e0b;
     --color-loading-bg: #fffbeb;
-    --color-loading-text: #92400e;
-    --color-focus: #111;
+    --color-loading-text: #7c3d00;
+
+    /* Diferencias de /comparar */
+    --color-diff-add-bg: #e6ffed;
+    --color-diff-sub-bg: #ffeef0;
+    --color-diff-chg-bg: #fff5b1;
+    --color-diff-next-bg: #f4f4f4;
+    --color-diff-next-text: #6b6b6b;
+
+    /* Foco */
+    --color-focus: #111111;
     --color-focus-ring: #ffffff;
     --color-nav-active-bg: rgba(0, 0, 0, 0.25);
+
     /* Espaciado */
     --space-1: 0.25rem;
     --space-2: 0.5rem;
@@ -44,6 +64,56 @@
     --focus-width: 3px;
     --focus-width-sm: 2px;
     --focus-offset: 2px;
+}
+
+/* Tema oscuro: se activa con la preferencia del sistema, sin interruptor ni
+   almacenamiento adicional. Todos los colores pasan por tokens para mantener
+   contraste AA (4.5:1 en texto normal, 3:1 en bordes y texto grande). */
+@media (prefers-color-scheme: dark) {
+    :root {
+        color-scheme: dark;
+
+        --color-primary: #ff6b7f;
+        --color-primary-dark: #ff8c9c;
+        --color-primary-light: #3a141c;
+        --color-on-primary: #1a1a1a;
+        --color-nav-bg: #b3122c;
+        --color-nav-text: #ffffff;
+
+        --color-text: #f2f2f2;
+        --color-text-light: #c9c9c9;
+        --color-text-muted: #b8b8b8;
+        --color-border: #8c8c8c;
+        --color-border-light: #404040;
+        --color-border-lighter: #363636;
+        --color-bg: #121212;
+        --color-bg-alt: #262626;
+        --color-surface: #1e1e1e;
+        --color-surface-alt: #262626;
+
+        --color-success: #7ee2a8;
+        --color-success-bg: #102a1c;
+        --color-success-border: #2b6b43;
+        --color-error: #ff9aa6;
+        --color-error-bg: #37131a;
+        --color-error-border: #8c2f3d;
+        --color-warning: #ffd87a;
+        --color-warning-bg: #332809;
+        --color-warning-border: #80651f;
+        --color-loading-border: #f0b429;
+        --color-loading-bg: #332809;
+        --color-loading-text: #ffe0a3;
+
+        --color-diff-add-bg: #123322;
+        --color-diff-sub-bg: #3a151c;
+        --color-diff-chg-bg: #3a3210;
+        --color-diff-next-bg: #262626;
+        --color-diff-next-text: #a8a8a8;
+
+        --color-focus: #ffffff;
+        --color-focus-ring: #000000;
+        --color-nav-active-bg: rgba(0, 0, 0, 0.35);
+    }
 }
 
 /* ─── Reset y base ─────────────────────────────────────────────── */
@@ -75,6 +145,25 @@ body {
     border: 0;
 }
 
+/* WCAG 2.4.1: enlace para saltar la navegación con teclado. */
+.skip-link {
+    position: absolute;
+    top: -100px;
+    left: var(--space-4);
+    z-index: 1000;
+    padding: var(--space-3) var(--space-4);
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 2px solid var(--color-focus);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.skip-link:focus {
+    top: var(--space-2);
+}
+
 /* ─── Navegación ───────────────────────────────────────────────── */
 .navbar {
     display: flex;
@@ -83,14 +172,14 @@ body {
     flex-wrap: wrap;
     gap: var(--space-2);
     padding: var(--space-4) var(--space-8);
-    background: var(--color-primary); /* Rojo iLovePDF */
-    color: white;
+    background: var(--color-nav-bg);
+    color: var(--color-nav-text);
 }
 
 .logo {
     font-size: 1.5rem;
     font-weight: bold;
-    color: white;
+    color: var(--color-nav-text);
     text-decoration: none;
 }
 
@@ -98,10 +187,10 @@ body {
     display: none;
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.6);
-    color: white;
+    color: var(--color-nav-text);
     font-size: 1.25rem;
     line-height: 1;
-    padding: 0.var(--space-12) 0.6rem;
+    padding: var(--space-2) 0.6rem;
     border-radius: var(--radius-md);
     cursor: pointer;
 }
@@ -114,7 +203,7 @@ body {
 }
 
 .nav-links a {
-    color: white;
+    color: var(--color-nav-text);
     text-decoration: none;
     font-weight: 500;
 }
@@ -134,7 +223,7 @@ body {
 /* Botones de reordenado en la lista de archivos (R-10) */
 .file-item button {
     font-size: 0.85rem;
-    padding: 0.var(--space-8) var(--space-2);
+    padding: var(--space-1) var(--space-2);
     border: 1px solid var(--color-border);
     background: var(--color-bg);
     border-radius: var(--radius-sm);
@@ -196,7 +285,7 @@ body {
 }
 
 .tool-card {
-    background: white;
+    background: var(--color-surface);
     border-radius: var(--radius-lg);
     padding: var(--space-8);
     text-align: center;
@@ -229,7 +318,7 @@ body {
 
 /* ─── Página de herramienta ────────────────────────────────────── */
 .tool-page {
-    background: white;
+    background: var(--color-surface);
     border-radius: var(--radius-lg);
     padding: var(--space-8);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -298,7 +387,7 @@ body {
     padding: var(--space-2) var(--space-4);
     background: var(--color-surface-alt);
     border-radius: var(--radius-sm);
-    margin-bottom: 0.var(--space-12);
+    margin-bottom: var(--space-2);
     font-size: 0.95rem;
 }
 
@@ -317,7 +406,7 @@ body {
 
 .btn-primary {
     background: var(--color-primary);
-    color: white;
+    color: var(--color-on-primary);
 }
 
 .btn-primary:hover {
@@ -498,7 +587,7 @@ body {
     display: block;
     font-size: 0.85rem;
     color: var(--color-text-muted);
-    margin-bottom: 0.var(--space-12);
+    margin-bottom: var(--space-1);
 }
 
 .size-value {
@@ -529,9 +618,9 @@ body {
 /* ─── Comparación de PDF (v1.4) ────────────────────────────────── */
 .diff-page {
     margin-top: var(--space-6);
-    background: var(--color-surface, #fff);
-    border: 1px solid var(--color-border, #d9d9d9);
-    border-radius: var(--radius-md, 8px);
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
     padding: var(--space-4);
 }
 
@@ -549,10 +638,12 @@ table.diff {
     border-collapse: collapse;
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 0.8rem;
+    color: var(--color-text);
 }
 
 table.diff th.diff_header {
-    background: var(--color-bg-alt, #f4f4f4);
+    background: var(--color-bg-alt);
+    color: var(--color-text);
     text-align: left;
     padding: 0.3rem 0.5rem;
 }
@@ -562,14 +653,15 @@ table.diff td {
     vertical-align: top;
     white-space: pre-wrap;
     word-break: break-word;
+    color: var(--color-text);
 }
 
-table.diff td.diff_add { background: #e6ffed; }
-table.diff td.diff_sub { background: #ffeef0; }
-table.diff td.diff_chg { background: #fff5b1; }
+table.diff td.diff_add { background: var(--color-diff-add-bg); }
+table.diff td.diff_sub { background: var(--color-diff-sub-bg); }
+table.diff td.diff_chg { background: var(--color-diff-chg-bg); }
 table.diff td.diff_next {
-    background: #f4f4f4;
-    color: #999;
+    background: var(--color-diff-next-bg);
+    color: var(--color-diff-next-text);
     text-align: center;
 }
 
@@ -581,12 +673,14 @@ select:focus-visible,
 textarea:focus-visible {
     outline: var(--focus-width) solid var(--color-focus);
     outline-offset: var(--focus-offset);
+    box-shadow: 0 0 0 calc(var(--focus-width) + var(--focus-offset)) var(--color-focus-ring);
 }
 
 .navbar a:focus-visible,
 .nav-toggle:focus-visible {
-    outline: var(--focus-width) solid #ffffff;
+    outline: var(--focus-width) solid var(--color-nav-text);
     outline-offset: var(--focus-offset);
+    box-shadow: 0 0 0 calc(var(--focus-width) + var(--focus-offset)) var(--color-focus-ring);
 }
 
 /* ─── Campos de formulario unificados (R-13) ───────────────────── */
@@ -722,7 +816,7 @@ input[type="number"] {
 .nav-group-toggle {
     background: transparent;
     border: 1px solid rgba(255, 255, 255, 0.5);
-    color: white;
+    color: var(--color-nav-text);
     font-weight: 500;
     padding: 0.4rem 0.7rem;
     border-radius: var(--radius-md);
@@ -733,12 +827,12 @@ input[type="number"] {
 .nav-group-toggle:hover,
 .nav-group-toggle:focus-visible {
     background: rgba(255, 255, 255, 0.15);
-    outline: var(--focus-width-sm) solid #ffffff;
+    outline: var(--focus-width-sm) solid var(--color-nav-text);
     outline-offset: var(--focus-offset);
 }
 
 .nav-group-toggle.active {
-    background: rgba(0, 0, 0, 0.25);
+    background: var(--color-nav-active-bg);
     font-weight: 700;
 }
 
@@ -747,7 +841,7 @@ input[type="number"] {
     top: 100%;
     left: 0;
     margin-top: 0.4rem;
-    background: white;
+    background: var(--color-surface);
     color: var(--color-text);
     border-radius: var(--radius-lg);
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
@@ -882,7 +976,8 @@ input[type="number"] {
 .form-field input[type="search"],
 .form-field input[type="password"],
 .form-field input[type="number"],
-.form-field select {
+.form-field select,
+.form-field textarea {
     width: 100%;
     max-width: 360px;
     padding: var(--space-3) var(--space-4);
