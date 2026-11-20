@@ -17,12 +17,14 @@
         <div class="nav-groups" id="navGroups">
             {# Grupo: Ordenar PDF #}
             <div class="nav-group">
-                <button type="button" class="nav-group-toggle {% if request.endpoint in ['unir', 'dividir'] %}active{% endif %}"
+                <button type="button" class="nav-group-toggle {% if request.endpoint in ['unir', 'dividir', 'recortar_pdf', 'reordenar_pdf'] %}active{% endif %}"
                         data-group="ordenar" aria-expanded="false" aria-controls="panel-ordenar"
                         aria-haspopup="true">Ordenar PDF ▾</button>
                 <div class="nav-panel" id="panel-ordenar" hidden>
                     <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}><span aria-hidden="true">🔗</span> Unir PDFs</a>
                     <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Dividir PDF</a>
+                    <a href="{{ url_for('recortar_pdf') }}" {% if request.endpoint == 'recortar_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Recortar PDF</a>
+                    <a href="{{ url_for('reordenar_pdf') }}" {% if request.endpoint == 'reordenar_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🔀</span> Reordenar PDF</a>
                 </div>
             </div>
 
@@ -89,6 +91,8 @@
                         <span class="nav-column-title">Ordenar PDF</span>
                         <a href="{{ url_for('unir') }}" {% if request.endpoint == 'unir' %}aria-current="page"{% endif %}><span aria-hidden="true">🔗</span> Unir PDFs</a>
                         <a href="{{ url_for('dividir') }}" {% if request.endpoint == 'dividir' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Dividir PDF</a>
+                        <a href="{{ url_for('recortar_pdf') }}" {% if request.endpoint == 'recortar_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">✂️</span> Recortar PDF</a>
+                        <a href="{{ url_for('reordenar_pdf') }}" {% if request.endpoint == 'reordenar_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🔀</span> Reordenar PDF</a>
                     </div>
                     <div class="nav-column">
                         <span class="nav-column-title">Optimizar PDF</span>

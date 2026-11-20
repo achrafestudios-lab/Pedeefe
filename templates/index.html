@@ -21,6 +21,16 @@
         <h3>Dividir PDF</h3>
         <p>Separa páginas o extrae un rango de un PDF.</p>
     </a>
+    <a href="{{ url_for('recortar_pdf') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">✂️</span>
+        <h3>Recortar PDF</h3>
+        <p>Conserva solo las páginas que elijas de un PDF.</p>
+    </a>
+    <a href="{{ url_for('reordenar_pdf') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🔀</span>
+        <h3>Reordenar PDF</h3>
+        <p>Cambia el orden de las páginas de un PDF.</p>
+    </a>
     <a href="{{ url_for('comprimir') }}" class="tool-card">
         <span class="tool-icon" aria-hidden="true">📦</span>
         <h3>Optimizar PDF</h3>
