@@ -1,6 +1,7 @@
 import os
 import uuid
 import shutil
+import subprocess
 import zipfile
 from io import BytesIO
 from flask import Flask, render_template, request, send_file, abort
@@ -56,6 +57,8 @@ def cleanup_uploads_folder():
 # Limpieza de seguridad al inicio
 cleanup_uploads_folder()
 
+# Detección de Tesseract OCR al arrancar (para la tarjeta de OCR en la portada)
+TESSERACT_AVAILABLE = shutil.which("tesseract") is not None
 
 def allowed_file(filename):
     """Comprueba si la extensión del archivo es permitida."""
@@ -138,6 +141,7 @@ REFERER_TO_TEMPLATE = {
     "/unir": "unir.html",
     "/dividir": "dividir.html",
     "/comprimir": "comprimir.html",
+    "/comprimir-real": "comprimir_real.html",
     "/pdf-a-imagen": "pdf_a_imagen.html",
     "/imagen-a-pdf": "imagen_a_pdf.html",
     "/pdf-a-word": "pdf_a_word.html",
@@ -167,7 +171,7 @@ def too_large(e):
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", tesseract_available=TESSERACT_AVAILABLE)
 
 
 # ─── Unir PDFs ──────────────────────────────────────────────────────
@@ -469,6 +473,111 @@ def descargar_comprimido(token):
         return send_file(output_path, as_attachment=True, download_name="comprimido.pdf")
     finally:
         cleanup_folder(temp_dir)
+
+
+# ─── Comprimir PDF real (Ghostscript) ────────────────────────────
+
+@app.route("/comprimir-real", methods=["GET", "POST"])
+def comprimir_real():
+    if request.method == "GET":
+        return render_template("comprimir_real.html")
+
+    # Recibir archivo
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("comprimir_real.html", error="Selecciona un PDF para comprimir.")
+
+    if not allowed_file(file.filename):
+        return render_template("comprimir_real.html", error="El archivo seleccionado no es un PDF.")
+
+    # Validar tamaño del archivo
+    size_error = validate_file_size(file, "comprimir_real.html")
+    if size_error:
+        return size_error
+
+    # Carpeta temporal única para esta petición
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+
+    try:
+        # Guardar archivo temporalmente con nombre único
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+
+        # Validar que sea un PDF real
+        if not validate_pdf(filepath):
+            return render_template("comprimir_real.html", error="El archivo no se puede leer como PDF.")
+
+        original_size = os.path.getsize(filepath)
+
+        # Comprimir con Ghostscript (pdfwrite, preset ebook)
+        gs_bin = shutil.which("gs")
+        if not gs_bin:
+            return render_template(
+                "comprimir_real.html",
+                error="No se encontró Ghostscript en el sistema. Instálalo con: sudo apt install ghostscript"
+            )
+
+        output_path = os.path.join(temp_dir, "comprimido.pdf")
+        try:
+            result = subprocess.run(
+                [
+                    gs_bin,
+                    "-sDEVICE=pdfwrite",
+                    "-dCompatibilityLevel=1.4",
+                    "-dPDFSETTINGS=/ebook",
+                    "-dNOPAUSE",
+                    "-dQUIET",
+                    "-dBATCH",
+                    f"-sOutputFile={output_path}",
+                    filepath,
+                ],
+                check=True,
+                capture_output=True,
+                timeout=120,
+            )
+        except subprocess.CalledProcessError as e:
+            err_msg = (e.stderr or b"").decode("utf-8", "replace").strip()
+            if not err_msg:
+                err_msg = "Ghostscript no pudo procesar el PDF."
+            return render_template("comprimir_real.html", error=f"Error al comprimir: {err_msg}")
+        except subprocess.TimeoutExpired:
+            return render_template("comprimir_real.html", error="Error al comprimir: el proceso tardó demasiado.")
+        except FileNotFoundError:
+            return render_template(
+                "comprimir_real.html",
+                error="No se encontró Ghostscript en el sistema. Instálalo con: sudo apt install ghostscript"
+            )
+
+        if not os.path.exists(output_path):
+            return render_template("comprimir_real.html", error="Error al comprimir: no se generó el archivo de salida.")
+
+        compressed_size = os.path.getsize(output_path)
+
+        # Calcular porcentaje de reducción
+        if original_size > 0:
+            reduction = ((original_size - compressed_size) / original_size) * 100
+        else:
+            reduction = 0
+
+        already_optimized = compressed_size >= original_size
+
+        # Mostrar resultado con tamaños y enlace de descarga
+        return render_template(
+            "comprimir_real.html",
+            success=True,
+            original_size=format_size(original_size),
+            compressed_size=format_size(compressed_size),
+            reduction=round(reduction, 1),
+            download_token=os.path.basename(temp_dir),
+            already_optimized=already_optimized,
+        )
+
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template("comprimir_real.html", error=f"Error al comprimir: {str(e)}")
 
 
 # ─── PDF a Imágenes ──────────────────────────────────────────────
