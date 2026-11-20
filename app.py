@@ -86,6 +86,13 @@ app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
+def _create_temp_dir():
+    """Crea una carpeta temporal privada (0700) para una petición."""
+    path = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(path, mode=0o700)
+    return path
+
+
 def cleanup_uploads_folder():
     """Limpia todos los archivos residuales en uploads/ al arrancar la app."""
     if os.path.exists(UPLOAD_FOLDER):
@@ -365,8 +372,7 @@ def unir():
         return render_template("unir.html", error="Selecciona al menos 2 PDFs para unir.")
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         valid_files = []
@@ -452,8 +458,7 @@ def dividir():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -591,8 +596,8 @@ def comprimir():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -621,6 +626,7 @@ def comprimir():
             reduction = 0
 
         # Mostrar resultado con tamaños y enlace de descarga
+        keep_temp = True
         return render_template(
             "comprimir.html",
             success=True,
@@ -631,8 +637,10 @@ def comprimir():
         )
 
     except Exception as e:
-        cleanup_folder(temp_dir)
         return render_template("comprimir.html", error=f"Error al comprimir: {str(e)}")
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 @app.route("/descargar_comprimido/<token>")
@@ -674,8 +682,8 @@ def comprimir_real():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -743,6 +751,7 @@ def comprimir_real():
         already_optimized = compressed_size >= original_size
 
         # Mostrar resultado con tamaños y enlace de descarga
+        keep_temp = True
         return render_template(
             "comprimir_real.html",
             success=True,
@@ -754,11 +763,14 @@ def comprimir_real():
         )
 
     except Exception as e:
-        cleanup_folder(temp_dir)
         return render_template("comprimir_real.html", error=f"Error al comprimir: {str(e)}")
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 # ─── PDF a Imágenes ──────────────────────────────────────────────
+
 
 @app.route("/pdf-a-imagen", methods=["GET", "POST"])
 def pdf_a_imagen():
@@ -786,8 +798,7 @@ def pdf_a_imagen():
         format_choice = "jpg"
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -872,8 +883,7 @@ def imagen_a_pdf():
         return render_template("imagen_a_pdf.html", error="Selecciona al menos una imagen.")
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         valid_files = []
@@ -915,7 +925,7 @@ def imagen_a_pdf():
             )
 
         # Convertir imágenes a PDF con Pillow
-        # La primera imagen define el tamaño base del PDF
+        # Cada página usa el tamaño real de su imagen (verificado en V9)
         pdf_images = []
         for filepath in valid_files:
             img = Image.open(filepath)
@@ -974,8 +984,8 @@ def pdf_a_word():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1007,6 +1017,7 @@ def pdf_a_word():
         output_size = os.path.getsize(output_path)
         is_likely_scanned = output_size < 1000  # Un .docx vacío pesa ~3KB, así que <1KB es sospechoso
 
+        keep_temp = True
         return render_template(
             "pdf_a_word.html",
             success=True,
@@ -1016,8 +1027,10 @@ def pdf_a_word():
         )
 
     except Exception as e:
-        cleanup_folder(temp_dir)
         return render_template("pdf_a_word.html", error=f"Error al convertir: {str(e)}")
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 @app.route("/descargar_word/<token>")
@@ -1067,8 +1080,7 @@ def rotar():
     angle = int(angle)
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1134,8 +1146,7 @@ def proteger():
         return render_template("proteger.html", error="Las contraseñas no coinciden. Vuelve a introducirlas.")
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1197,8 +1208,7 @@ def desproteger():
         return render_template("desproteger.html", error="Introduce la contraseña del PDF.")
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1269,8 +1279,7 @@ def ocr():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1371,8 +1380,7 @@ def marcar_agua():
                               watermark_text=request.form.get("watermark_text", ""))
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1494,8 +1502,7 @@ def numerar():
         start_num = 1
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1610,8 +1617,7 @@ def recortar_pdf():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1683,8 +1689,7 @@ def reordenar_pdf():
         return size_error
 
     # Carpeta temporal única para esta petición
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
 
     try:
         # Guardar archivo temporalmente con nombre único
@@ -1877,6 +1882,29 @@ def _html_to_pdf(html_str, output_path):
     WeasyHTML(string=html_str).write_pdf(output_path)
 
 
+OOXML_MEMBERS = {
+    "docx": "word/document.xml",
+    "xlsx": "xl/workbook.xml",
+    "pptx": "ppt/presentation.xml",
+}
+
+
+def _valid_ooxml(path, ext):
+    """Comprueba que un DOCX/XLSX/PPTX es un ZIP con su parte principal.
+
+    La extensión por sí sola no basta: según la versión de LibreOffice, un
+    archivo corrupto puede convertirse igualmente y devolver un PDF vacío.
+    """
+    member = OOXML_MEMBERS.get(ext.lower())
+    if member is None:
+        return True
+    try:
+        with zipfile.ZipFile(path) as archive:
+            return member in archive.namelist()
+    except (OSError, zipfile.BadZipFile):
+        return False
+
+
 def _office_to_pdf(input_path, output_path, ext):
     """Convierte un archivo Office/HTML a PDF. Usa LibreOffice si está disponible."""
     if _office_to_pdf_libreoffice(input_path, output_path):
@@ -1926,8 +1954,8 @@ def pdf_a_excel():
     size_error = validate_file_size(file, "pdf_a_excel.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
         unique_name = f"{uuid.uuid4()}.{ext}"
@@ -1960,6 +1988,7 @@ def pdf_a_excel():
         if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
             del wb["Sheet"]
         wb.save(output_path)
+        keep_temp = True
         return render_template(
             "pdf_a_excel.html",
             success=True,
@@ -1972,6 +2001,9 @@ def pdf_a_excel():
             error=_friendly_error("extraer los datos del PDF", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 @app.route("/descargar_excel/<token>")
@@ -2001,8 +2033,8 @@ def pdf_a_powerpoint():
     size_error = validate_file_size(file, "pdf_a_powerpoint.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
         unique_name = f"{uuid.uuid4()}.{ext}"
@@ -2023,6 +2055,7 @@ def pdf_a_powerpoint():
             slide.shapes.add_picture(img_path, Inches(0), Inches(0), width=Inches(10), height=Inches(7.5))
             os.remove(img_path)  # python-pptx ya ha incrustado la imagen
         prs.save(output_path)
+        keep_temp = True
         return render_template(
             "pdf_a_powerpoint.html",
             success=True,
@@ -2035,6 +2068,9 @@ def pdf_a_powerpoint():
             error=_friendly_error("convertir el PDF a PowerPoint", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 @app.route("/descargar_powerpoint/<token>")
@@ -2064,8 +2100,8 @@ def pdf_a_html():
     size_error = validate_file_size(file, "pdf_a_html.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
         unique_name = f"{uuid.uuid4()}.{ext}"
@@ -2091,6 +2127,7 @@ def pdf_a_html():
         )
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(html)
+        keep_temp = True
         return render_template(
             "pdf_a_html.html",
             success=True,
@@ -2103,6 +2140,9 @@ def pdf_a_html():
             error=_friendly_error("convertir el PDF a HTML", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 @app.route("/descargar_html/<token>")
@@ -2133,14 +2173,19 @@ def word_a_pdf():
     size_error = validate_file_size(file, "word_a_pdf.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         unique_name = f"{uuid.uuid4()}.{ext}" if ext else f"{uuid.uuid4()}.bin"
         filepath = os.path.join(temp_dir, unique_name)
         file.save(filepath)
+        if not _valid_ooxml(filepath, ext):
+            return render_template(
+                "word_a_pdf.html", error="El archivo no es un documento DOCX válido."
+            )
         output_path = os.path.join(temp_dir, "convertido.pdf")
         _office_to_pdf(filepath, output_path, ext)
+        keep_temp = True
         return render_template(
             "word_a_pdf.html",
             success=True,
@@ -2153,9 +2198,14 @@ def word_a_pdf():
             error=_friendly_error("convertir el documento a PDF", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 # ─── /excel-a-pdf ────────────────────────────────────────────────────
+
+
 @app.route("/excel-a-pdf", methods=["GET", "POST"])
 def excel_a_pdf():
     if request.method == "GET":
@@ -2170,12 +2220,16 @@ def excel_a_pdf():
     if size_error:
         return size_error
     # CSV -> convertir a xlsx primero
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         unique_name = f"{uuid.uuid4()}.{ext}" if ext else f"{uuid.uuid4()}.bin"
         filepath = os.path.join(temp_dir, unique_name)
         file.save(filepath)
+        if not _valid_ooxml(filepath, ext):
+            return render_template(
+                "excel_a_pdf.html", error="El archivo no es una hoja de cálculo XLSX válida."
+            )
         if ext == "csv":
             # convertir CSV a xlsx para poder renderizarlo como tabla
             import csv as _csv
@@ -2192,6 +2246,7 @@ def excel_a_pdf():
             ext = "xlsx"
         output_path = os.path.join(temp_dir, "convertido.pdf")
         _office_to_pdf(filepath, output_path, ext)
+        keep_temp = True
         return render_template(
             "excel_a_pdf.html",
             success=True,
@@ -2204,9 +2259,14 @@ def excel_a_pdf():
             error=_friendly_error("convertir la hoja de cálculo a PDF", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 # ─── /powerpoint-a-pdf ───────────────────────────────────────────────
+
+
 @app.route("/powerpoint-a-pdf", methods=["GET", "POST"])
 def powerpoint_a_pdf():
     if request.method == "GET":
@@ -2220,14 +2280,19 @@ def powerpoint_a_pdf():
     size_error = validate_file_size(file, "powerpoint_a_pdf.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
+    keep_temp = False
     try:
         unique_name = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join(temp_dir, unique_name)
         file.save(filepath)
+        if not _valid_ooxml(filepath, ext):
+            return render_template(
+                "powerpoint_a_pdf.html", error="El archivo no es una presentación PPTX válida."
+            )
         output_path = os.path.join(temp_dir, "convertido.pdf")
         _office_to_pdf(filepath, output_path, ext)
+        keep_temp = True
         return render_template(
             "powerpoint_a_pdf.html",
             success=True,
@@ -2240,9 +2305,14 @@ def powerpoint_a_pdf():
             error=_friendly_error("convertir la presentación a PDF", e),
         )
     # La carpeta se conserva hasta la descarga por token (UUID validado).
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
 
 
 # ─── /html-a-pdf ─────────────────────────────────────────────────────
+
+
 @app.route("/html-a-pdf", methods=["GET", "POST"])
 def html_a_pdf():
     if request.method == "GET":
@@ -2253,8 +2323,7 @@ def html_a_pdf():
         html_text = request.form.get("html_text", "").strip()
         if not html_text:
             return render_template("html_a_pdf.html", error="Selecciona un archivo HTML o pega el contenido.")
-        temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-        os.makedirs(temp_dir)
+        temp_dir = _create_temp_dir()
         try:
             output_path = os.path.join(temp_dir, "convertido.pdf")
             _html_to_pdf(html_text, output_path)
@@ -2278,8 +2347,7 @@ def html_a_pdf():
     size_error = validate_file_size(file, "html_a_pdf.html")
     if size_error:
         return size_error
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
     try:
         unique_name = f"{uuid.uuid4()}.{ext}"
         filepath = os.path.join(temp_dir, unique_name)
@@ -2365,8 +2433,7 @@ def firmar():
             error="La firma digital no está disponible. Instala las dependencias del proyecto.",
         )
 
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
     try:
         filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
         pdf_file.save(filepath)
@@ -2437,8 +2504,7 @@ def censurar():
             error="La censura no está disponible. Instala las dependencias del proyecto.",
         )
 
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
     try:
         filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
         pdf_file.save(filepath)
@@ -2493,8 +2559,7 @@ def comparar():
         if size_error:
             return size_error
 
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
     try:
         paths = []
         for upload in (first, second):
@@ -2700,8 +2765,7 @@ def lotes():
         "start_num": start_num,
     }
 
-    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
-    os.makedirs(temp_dir)
+    temp_dir = _create_temp_dir()
     try:
         total_size = 0
         total_pages = 0
@@ -3048,7 +3112,7 @@ def api_tools():
         })
     return jsonify({
         "ok": True,
-        "version": "2.0.0",
+        "version": "2.0.1",
         "count": len(tools),
         "tools": tools,
     })

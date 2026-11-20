@@ -179,9 +179,9 @@ Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.0.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.0.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.0.0-mac-x64.dmg` / `Pedeefe-2.0.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.0.1-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.0.1-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.0.1-mac-x64.dmg` / `Pedeefe-2.0.1-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -207,7 +207,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.0.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.0.1-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -502,8 +502,8 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 248 casos (una omisión: OCR, porque Tesseract no está disponible en
-este entorno):
+Incluye 252 casos (una omisión: OCR, porque Tesseract no está disponible en
+este entorno local; en Docker se ejecuta y comprueba el texto extraído):
 
 | Fichero | Qué cubre |
 |---|---|
@@ -518,6 +518,7 @@ este entorno):
 | `tests/test_pwa.py` | Manifiesto, iconos, service worker y registro seguro |
 | `tests/test_api.py` | Token local, catálogo, ejecución de handlers y descargas por token desde la API |
 | `tests/test_cli.py` | Catálogo, reparto de archivos, parámetros, salida y errores del CLI |
+| `tests/test_hardening.py` | Temporales `0700`, limpieza con PDFs corruptos y descarga diferida |
 
 Comprobaciones adicionales:
 
@@ -695,6 +696,24 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v2.0.1 (consolidación y hardening)
+
+- **Carpetas temporales privadas:** todas las peticiones crean su directorio
+  `uploads/<uuid4>/` con modo `0700` mediante un helper compartido.
+- **Limpieza de temporales reforzada:** nueve rutas de descarga diferida
+  conservan la carpeta solo mientras el token sigue vivo; cualquier error
+  (incluidos PDFs corruptos) limpia antes de devolver la respuesta.
+- **Validación OOXML:** los DOCX/XLSX/PPTX corruptos se rechazan antes de
+  llamar a LibreOffice, evitando conversiones vacías silenciosas.
+- **OCR cubierto en Docker:** el test de `/ocr` se omite solo si falta
+  Tesseract; con la imagen Docker (español incluido) se ejecuta y verifica.
+- **CI sin aviso de Node 20:** las acciones de GitHub se actualizan a `@v7`
+  (Node 24). Sin dependencias Python nuevas ni cambios de funcionalidad.
+- **4 tests nuevos** (252 en total) y verificación real de U1 (9 tokens de
+  traversal rechazados por un servidor WSGI), U3 (PDF de 46,4 MiB en 0,3 s),
+  PWA en navegador (SW activo, caché solo de cáscara, Lighthouse 1,00).
+  Los instaladores de escritorio se regeneran como `2.0.1`.
+
 ### v2.0 (API y CLI local)
 
 - **API JSON local** en `GET /api/v1/tools` y `POST /api/v1/tools/<slug>`, sobre
@@ -709,7 +728,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
   stderr. Sin dependencias Python nuevas.
 - **25 tests nuevos** (248 en total): autenticación, catálogo, ejecución y
   descargas de la API; catálogo, reparto de archivos y salida del CLI. Los
-  instaladores de escritorio se regeneran como `2.0.0`.
+  instaladores de escritorio se regeneraron como `2.0.0`.
 
 ### v1.9 (PWA instalable)
 
@@ -830,6 +849,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.8 | Windows y macOS del escritorio | Completada |
 | v1.9 | PWA instalable | Completada |
 | v2.0 | API y CLI local | Completada |
+| v2.0.1 | Consolidación y hardening | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -881,14 +901,14 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas web | 28 (26 expuestas en la API local) |
 | Rutas HTTP | 39 de aplicación (40 reglas en `url_map`) |
 | Plantillas Jinja2 | 31 |
-| Tests | 248 (1 omitido) |
+| Tests | 252 (1 omitido en local) |
 | Líneas de `app.py` | ~3.080 |
 | Dependencias Python | 15 (sin cambios en v2.0) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | Local, solo loopback, con token `0600` |
-| Versión actual | 2.0 |
+| Versión actual | 2.0.1 |
 
 ---
 

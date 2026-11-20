@@ -256,7 +256,8 @@ class TestOfficeToPdfFase4(TempUploadMixin, unittest.TestCase):
         self.assertGreaterEqual(len(reader.pages), 1)
         if expected_text:
             text = " ".join((p.extract_text() or "") for p in reader.pages)
-            self.assertIn(expected_text, text)
+            # Según la versión de LibreOffice el texto puede partirse en líneas.
+            self.assertIn("".join(expected_text.split()), "".join(text.split()))
         self.assertEqual(os.listdir(self.uploads), [])
 
     def test_docx_to_pdf(self):

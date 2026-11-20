@@ -5,8 +5,8 @@ No requieren servidor ni puerto. Ejecutar:
 
     .venv/bin/python -m unittest discover -s tests -v
 
-Tesseract está ausente en este entorno: /ocr se marca como no probado (skip),
-no como fallo.
+Tesseract está ausente en el entorno local: /ocr se omite (skip). En Docker,
+con Tesseract y datos españoles, el mismo test se ejecuta y comprueba el texto.
 """
 
 import io
@@ -800,12 +800,13 @@ class TestOcrTools(TempUploadMixin, unittest.TestCase):
     def test_get_200(self):
         self.assertEqual(self.client.get("/ocr").status_code, 200)
 
-    @unittest.skip("Tesseract ausente en este entorno: /ocr no probado")
+    @unittest.skipUnless(shutil.which("tesseract"), "Tesseract ausente en este entorno")
     def test_post_ocr(self):
-        pdf = make_pdf_bytes()
+        pdf = make_pdf_bytes("PEDEEFE OCR")
         data = {"file": (io.BytesIO(pdf), "a.pdf")}
         resp = self.client.post("/ocr", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"PEDEEFE", resp.data.upper())
 
 
 class TestRepoUploadsEmptyTools(unittest.TestCase):
