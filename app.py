@@ -1,4 +1,5 @@
 import os
+import re
 import uuid
 import shutil
 import subprocess
@@ -171,6 +172,45 @@ def validate_file_size(file_storage, template_name, filename_label="El archivo")
     return None
 
 
+# ─── Productividad: lotes, historial y plantillas (v1.5) ─────────────
+
+# Límites duros del procesamiento por lotes. El total de subida comparte el
+# tope global de 50 MB por petición (MAX_CONTENT_LENGTH), así que un lote no
+# puede multiplicar el consumo de CPU/RAM más allá de esos valores.
+MAX_BATCH_FILES = 10
+MAX_BATCH_PAGES = 200
+MAX_BATCH_TOTAL_SIZE = MAX_FILE_SIZE
+
+HISTORY_TTL_DAYS = 30
+HISTORY_MAX_ENTRIES = 50
+TEMPLATE_TTL_DAYS = 90
+TEMPLATE_MAX_ENTRIES = 20
+
+BATCH_OPERATIONS = (
+    "rotar",
+    "optimizar",
+    "proteger",
+    "desproteger",
+    "marcar_agua",
+    "numerar",
+)
+
+BATCH_SUFFIXES = {
+    "rotar": "rotado",
+    "optimizar": "optimizado",
+    "proteger": "protegido",
+    "desproteger": "desprotegido",
+    "marcar_agua": "marcado",
+    "numerar": "numerado",
+}
+
+BATCH_LIMITS = {
+    "files": MAX_BATCH_FILES,
+    "pages": MAX_BATCH_PAGES,
+    "total_mb": MAX_BATCH_TOTAL_SIZE // (1024 * 1024),
+}
+
+
 # ─── Error 413 (archivo demasiado grande) ────────────────────────────
 
 # Mapeo de referer a plantilla para redirigir al usuario a la página de origen
@@ -200,6 +240,7 @@ REFERER_TO_TEMPLATE = {
     "/firmar": "firmar.html",
     "/censurar": "censurar.html",
     "/comparar": "comparar.html",
+    "/lotes": "lotes.html",
 }
 
 
@@ -2417,6 +2458,269 @@ def comparar():
         )
     finally:
         cleanup_folder(temp_dir)
+
+
+# ─── Lotes: una operación aplicada a varios PDF (v1.5) ───────────────
+
+
+def _batch_page(message, **values):
+    """Renderiza /lotes con un error legible y conserva los valores del formulario."""
+    context = {
+        "operations": BATCH_OPERATIONS,
+        "limits": BATCH_LIMITS,
+        "error": message,
+    }
+    context.update(values)
+    return render_template("lotes.html", **context)
+
+
+def _batch_output_name(filename, operation, index):
+    """Nombre seguro y legible para el PDF resultante dentro del ZIP."""
+    stem = os.path.splitext(os.path.basename(filename or "documento"))[0]
+    stem = re.sub(r"[^A-Za-z0-9._-]+", "_", stem).strip("._-")[:60]
+    stem = stem or "documento"
+    return f"{stem}_{BATCH_SUFFIXES[operation]}.pdf"
+
+
+def _upload_size(upload):
+    """Tamaño real de un archivo subido, dejando el puntero al inicio."""
+    upload.seek(0, os.SEEK_END)
+    size = upload.tell()
+    upload.seek(0)
+    return size
+
+
+def _process_batch_pdf(source, target, operation, params):
+    """Aplica una operación a un PDF. Las excepciones se traducen en la ruta."""
+    if operation == "optimizar":
+        with pikepdf.open(source) as pdf:
+            pdf.save(target)
+        return
+
+    reader = PdfReader(source)
+    if operation == "desproteger":
+        if not reader.is_encrypted:
+            raise ValueError("Uno de los PDF no tiene contraseña.")
+        if not reader.decrypt(params["password"]):
+            raise ValueError("La contraseña no abre todos los PDF del lote.")
+    elif reader.is_encrypted:
+        raise ValueError("Uno de los PDF está protegido; desprotégelo antes del lote.")
+
+    writer = PdfWriter()
+    if operation == "rotar":
+        for page in reader.pages:
+            page.rotate(params["angle"])
+            writer.add_page(page)
+    elif operation == "proteger":
+        for page in reader.pages:
+            writer.add_page(page)
+        writer.encrypt(params["password"])
+    elif operation == "desproteger":
+        for page in reader.pages:
+            writer.add_page(page)
+    elif operation == "marcar_agua":
+        for page in reader.pages:
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            if width <= 0 or height <= 0:
+                width = float(page.cropbox.width)
+                height = float(page.cropbox.height)
+            watermark = PdfReader(
+                create_watermark_pdf(params["watermark_text"], width, height)
+            ).pages[0]
+            # pypdf 7 exige añadir la página antes de superponer.
+            writer.add_page(page)
+            writer.pages[-1].merge_page(watermark)
+    elif operation == "numerar":
+        for offset, page in enumerate(reader.pages):
+            width = float(page.mediabox.width)
+            height = float(page.mediabox.height)
+            numbers = create_page_number_pdf(
+                width, height, params["start_num"] + offset, params["position"]
+            )
+            writer.add_page(page)
+            writer.pages[-1].merge_page(PdfReader(numbers).pages[0])
+
+    with open(target, "wb") as handle:
+        writer.write(handle)
+
+
+@app.route("/lotes", methods=["GET", "POST"])
+def lotes():
+    """Aplica la misma operación a varios PDFs y entrega un ZIP con los resultados."""
+    if request.method == "GET":
+        return render_template(
+            "lotes.html",
+            operation="rotar",
+            operations=BATCH_OPERATIONS,
+            limits=BATCH_LIMITS,
+        )
+
+    operation = request.form.get("operation", "rotar")
+    if operation not in BATCH_OPERATIONS:
+        return _batch_page("Selecciona una operación válida para el lote.", operation="rotar")
+
+    form_state = {
+        "operation": operation,
+        "angle": request.form.get("angle", "90"),
+        "watermark_text": request.form.get("watermark_text", ""),
+        "position": request.form.get("position", "bottom_center"),
+        "start_num": request.form.get("start_num", "1"),
+    }
+    angle = form_state["angle"] if form_state["angle"] in ("90", "180", "270") else "90"
+    form_state["angle"] = angle
+    password = request.form.get("password", "")
+    password_confirm = request.form.get("password_confirm", "")
+    watermark_text = form_state["watermark_text"].strip()
+    position = form_state["position"]
+    if position not in (
+        "bottom_center", "bottom_right", "bottom_left",
+        "top_center", "top_right", "top_left",
+    ):
+        position = "bottom_center"
+    try:
+        start_num = max(1, int(form_state["start_num"]))
+    except (TypeError, ValueError):
+        start_num = 1
+    form_state["position"] = position
+    form_state["start_num"] = str(start_num)
+
+    if operation == "proteger":
+        if not password:
+            return _batch_page("Introduce una contraseña para proteger los PDF.", **form_state)
+        if password != password_confirm:
+            return _batch_page("Las contraseñas no coinciden. Vuelve a introducirlas.", **form_state)
+    if operation == "desproteger" and not password:
+        return _batch_page("Introduce la contraseña de los PDF.", **form_state)
+    if operation == "marcar_agua" and not watermark_text:
+        return _batch_page("Introduce el texto de la marca de agua.", **form_state)
+
+    uploads = [item for item in request.files.getlist("files") if item and item.filename]
+    if not uploads:
+        return _batch_page("Selecciona al menos un PDF para el lote.", **form_state)
+    if len(uploads) > MAX_BATCH_FILES:
+        return _batch_page(
+            f"El lote admite como máximo {MAX_BATCH_FILES} PDFs. Divide la selección en varios lotes.",
+            **form_state,
+        )
+
+    params = {
+        "angle": int(angle),
+        "password": password,
+        "watermark_text": watermark_text,
+        "position": position,
+        "start_num": start_num,
+    }
+
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        total_size = 0
+        total_pages = 0
+        inputs = []
+        for index, upload in enumerate(uploads, 1):
+            if not allowed_file(upload.filename):
+                return _batch_page(f"'{upload.filename}' no es un PDF.", **form_state)
+
+            size = _upload_size(upload)
+            if size > MAX_FILE_SIZE:
+                return _batch_page(
+                    f"'{upload.filename}' supera el límite de 50 MB.", **form_state
+                )
+            total_size += size
+            if total_size > MAX_BATCH_TOTAL_SIZE:
+                return _batch_page(
+                    f"El lote supera el límite total de {BATCH_LIMITS['total_mb']} MB. "
+                    "Procesa menos archivos por vez.",
+                    **form_state,
+                )
+
+            source = os.path.join(temp_dir, f"entrada_{index}.pdf")
+            upload.save(source)
+            if not validate_pdf(source):
+                return _batch_page(
+                    f"'{upload.filename}' no se puede leer como PDF.", **form_state
+                )
+
+            reader = PdfReader(source)
+            if reader.is_encrypted:
+                if operation != "desproteger":
+                    return _batch_page(
+                        f"'{upload.filename}' está protegido. Desprotégelo antes del lote.",
+                        **form_state,
+                    )
+                if not reader.decrypt(password):
+                    return _batch_page(
+                        "La contraseña no abre todos los PDF del lote.", **form_state
+                    )
+            elif operation == "desproteger":
+                return _batch_page(f"'{upload.filename}' no tiene contraseña.", **form_state)
+
+            total_pages += len(reader.pages)
+            if total_pages > MAX_BATCH_PAGES:
+                return _batch_page(
+                    f"El lote supera el límite de {MAX_BATCH_PAGES} páginas en total. "
+                    "Procesa menos archivos por vez.",
+                    **form_state,
+                )
+            inputs.append((upload.filename, source))
+
+        zip_path = os.path.join(temp_dir, f"lote_{operation}.zip")
+        used_names = set()
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as archive:
+            for index, (filename, source) in enumerate(inputs, 1):
+                base_name = _batch_output_name(filename, operation, index)
+                output_name = base_name
+                duplicate = 2
+                while output_name in used_names:
+                    stem, ext = os.path.splitext(base_name)
+                    output_name = f"{stem}_{duplicate}{ext}"
+                    duplicate += 1
+                used_names.add(output_name)
+
+                target = os.path.join(temp_dir, f"salida_{index}.pdf")
+                try:
+                    _process_batch_pdf(source, target, operation, params)
+                except Exception:
+                    # No exponer str(e): el archivo puede contener datos del equipo.
+                    return _batch_page(
+                        f"No se pudo procesar '{filename}'. Comprueba que el PDF no esté dañado.",
+                        **form_state,
+                    )
+                archive.write(target, arcname=output_name)
+
+        return send_file(
+            zip_path, as_attachment=True, download_name=f"lote_{operation}.zip"
+        )
+    except Exception:
+        return _batch_page(
+            "No se pudo completar el lote. Revisa los archivos seleccionados.",
+            **form_state,
+        )
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── Historial y plantillas locales (v1.5) ───────────────────────────
+# El servidor solo entrega estas páginas: los datos viven en localStorage del
+# navegador (metadatos y parámetros, nunca archivos ni su contenido).
+
+@app.route("/historial")
+def historial():
+    return render_template(
+        "historial.html",
+        history_days=HISTORY_TTL_DAYS,
+        history_max=HISTORY_MAX_ENTRIES,
+    )
+
+
+@app.route("/plantillas")
+def plantillas():
+    return render_template(
+        "plantillas.html",
+        template_days=TEMPLATE_TTL_DAYS,
+        template_max=TEMPLATE_MAX_ENTRIES,
+    )
 
 
 if __name__ == "__main__":

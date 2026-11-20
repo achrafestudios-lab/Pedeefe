@@ -27,7 +27,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/tests-155%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-183%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -75,10 +75,10 @@
 
 ## ¿Qué es Pedeefe?
 
-Pedeefe es una aplicación web que reúne **25 herramientas para trabajar con
+Pedeefe es una aplicación web que reúne **28 herramientas para trabajar con
 PDFs**: unir, dividir, recortar, reordenar, optimizar, comprimir, convertir,
-rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar y extraer
-texto mediante OCR.
+rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, extraer
+texto mediante OCR y ahorrar tiempo con lotes, historial local y plantillas.
 
 **Todo ocurre en tu máquina.** No hay servidor público, no hay exposición de
 red, no se envían archivos a ningún servicio externo y no hay base de datos.
@@ -87,8 +87,8 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 
 ### Características principales
 
-- 📄 **25 herramientas en un solo lugar.** Organización, conversión, edición,
-  optimización, seguridad y análisis.
+- 📄 **28 herramientas en un solo lugar.** Organización, conversión, edición,
+  optimización, seguridad, análisis y productividad.
 - 🔒 **100 % local y privado.** Los archivos nunca salen del equipo; se eliminan
   al terminar la operación o tras la descarga.
 - 🗜️ **Optimizar y Comprimir son cosas distintas.** *Optimizar* reescribe la
@@ -114,7 +114,7 @@ con Docker y abriendo `http://localhost:43210`.
 
 | Vista | Descripción |
 |---|---|
-| Portada | Rejilla con las 25 herramientas y navegación desplegable por grupos |
+| Portada | Rejilla con las 28 herramientas y navegación desplegable por grupos |
 | Herramienta | Formulario de subida, opciones, resultado y descarga |
 | Resultado | Enlace de descarga temporal por token UUID para conversiones largas |
 
@@ -128,6 +128,7 @@ con Docker y abriendo `http://localhost:43210`.
 | Convertir desde PDF | PDF → imagen, Word, Excel, PowerPoint y HTML |
 | Editar | Rotar, numerar páginas y añadir marca de agua |
 | Seguridad | Proteger con contraseña y desproteger |
+| Productividad | Lotes con ZIP, historial local y plantillas reutilizables |
 
 ---
 
@@ -251,6 +252,7 @@ se valida tanto la extensión como el contenido real del archivo.
 | **Editar** | Rotar, Numerar, Marca de agua | `/rotar`, `/numerar`, `/marcar-agua` |
 | **Seguridad** | Proteger, Desproteger | `/proteger`, `/desproteger` |
 | **Avanzadas** | Firmar, Censurar, Comparar | `/firmar`, `/censurar`, `/comparar` |
+| **Productividad** | Lotes, Historial local, Plantillas | `/lotes`, `/historial`, `/plantillas` |
 
 Notas de uso:
 
@@ -266,6 +268,13 @@ Notas de uso:
 - **Comprimir** informa del porcentaje real de reducción; si el archivo ya
   está optimizado, lo dice sin prometer una mejora.
 - **OCR** depende de Tesseract con datos de idioma español.
+- **Lotes** aplica una misma operación (rotar, optimizar, proteger, desproteger,
+  marcar con agua o numerar) a varios PDFs y devuelve un ZIP. Límites por petición:
+  10 archivos, 200 páginas en total y 50 MB. No incluye firma ni OCR.
+- **Historial** y **Plantillas** funcionan solo en el navegador: el historial
+  registra los últimos envíos (metadatos y opciones, nunca archivos, contenido
+  ni contraseñas) y caduca a los 30 días; las plantillas guardan solo opciones
+  durante 90 días. Ambos se pueden borrar en cualquier momento.
 
 ---
 
@@ -305,6 +314,9 @@ Notas de uso:
 | `GET`/`POST` | `/firmar` | Firma el PDF con un certificado PKCS#12 |
 | `GET`/`POST` | `/censurar` | Elimina términos del texto del PDF |
 | `GET`/`POST` | `/comparar` | Muestra diferencias de texto entre dos PDFs |
+| `GET`/`POST` | `/lotes` | Aplica una operación a varios PDFs y devuelve un ZIP |
+| `GET` | `/historial` | Historial local (solo en el navegador) |
+| `GET` | `/plantillas` | Plantillas reutilizables (solo en el navegador) |
 
 Los archivos estáticos se sirven desde `/static/`.
 
@@ -327,6 +339,14 @@ procesan:
 Al arrancar la aplicación se limpia cualquier resto de `uploads/`. No hay
 persistencia entre reinicios.
 
+**Historial y plantillas (v1.5):** viven en `localStorage` del navegador, nunca
+en el servidor. El historial guarda como máximo 50 entradas durante 30 días y
+las plantillas 20 entradas durante 90 días; al cargar la página se descartan las
+caducadas. Solo se almacenan el nombre de la herramienta, nombres de archivo y
+las opciones del formulario. Nunca se guardan los PDF, su contenido ni
+contraseñas; para volver a procesar un archivo hay que seleccionarlo de nuevo.
+Ambas vistas ofrecen borrar una entrada o todo el conjunto.
+
 ---
 
 ## Seguridad y privacidad
@@ -338,6 +358,11 @@ persistencia entre reinicios.
 - Los tokens de descarga se validan como UUID y las rutas temporales se
   confinan al directorio `uploads/`.
 - No se envían archivos ni telemetría a ningún servicio externo.
+- Los lotes están acotados a 10 archivos, 200 páginas y 50 MB por petición para
+  limitar CPU/RAM; los PDF cifrados se rechazan salvo en la operación
+  «Desproteger», que usa la contraseña solo durante la petición.
+- El historial y las plantillas se guardan en el navegador, sin cookies ni
+  identificadores de usuario, y nunca incluyen contraseñas.
 
 ---
 
@@ -347,7 +372,7 @@ persistencia entre reinicios.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 155 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 183 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -356,6 +381,7 @@ este entorno):
 | `tests/test_tools.py` | Flujos completos y errores de las herramientas |
 | `tests/test_fase4.py` | Conversiones a y desde Office/HTML |
 | `tests/test_fase5.py` | Firma real, censura y comparación de texto |
+| `tests/test_fase6.py` | Lotes con ZIP, límites, errores y páginas de productividad |
 
 Comprobaciones adicionales:
 
@@ -402,8 +428,9 @@ docker compose down
 app.py                  Aplicación Flask: rutas, validación y procesamiento
 templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos
-static/js/main.js       Scripts compartidos
-tests/                  Suite unittest (humo, herramientas, conversiones y v1.4)
+static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
+static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4 y v1.5)
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
 requirements.txt        Dependencias Python
@@ -495,6 +522,18 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v1.5 (Fase 6)
+- **Lotes PDF**: una misma operación sobre varios PDF con descarga en ZIP.
+  Operaciones: rotar, optimizar, proteger, desproteger, marcar con agua y numerar.
+- **Límites explícitos** de 10 archivos, 200 páginas y 50 MB por lote, con
+  mensajes de error legibles y limpieza de temporales.
+- **Historial local**: últimas 50 operaciones durante 30 días, con búsqueda,
+  reutilización de opciones y borrado.
+- **Plantillas reutilizables**: hasta 20 conjuntos de opciones durante 90 días,
+  aplicables con un clic desde cualquier herramienta.
+- Todo el estado vive en `localStorage`: sin servidor que guarde archivos,
+  contraseñas ni contenido. 28 tests nuevos (183 en total).
+
 ### v1.4 (Fase 5)
 - **Firmar PDF**: firma criptográfica con certificado PKCS#12 mediante pyHanko.
 - **Censurar PDF**: borrado real de palabras o frases en todas las páginas.
@@ -540,7 +579,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.2 | Edición: recortar y reordenar | Completada |
 | v1.3 | Conversión PDF ↔ Office/HTML | Completada |
 | v1.4 | Seguridad avanzada: firmar, censurar, comparar | Completada |
-| v1.5 | Productividad: lotes, historial y plantillas | Planificada |
+| v1.5 | Productividad: lotes, historial y plantillas | Completada |
 | v1.6 | Plataforma: escritorio, API local y accesibilidad completa | Planificada |
 
 Línea opcional de *PDF Intelligence*: resumen con IA, traducción y exportación
@@ -559,7 +598,7 @@ a Markdown.
 | Interfaz en español | Sí | Sí | Sí | Sí | No |
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
-| 25 herramientas | Sí | Parcial | Parcial | Parcial | No |
+| 28 herramientas | Sí | Parcial | Parcial | Parcial | No |
 
 **Diferenciador clave:** Pedeefe es una caja de herramientas PDF en español,
 local y sin cuenta, con Docker listo y conversiones en ambos sentidos.
@@ -587,14 +626,14 @@ Pedeefe se construye sobre proyecto open source:
 
 | Métrica | Valor |
 |---|---|
-| Herramientas | 25 |
-| Rutas HTTP | 32 |
-| Plantillas | 28 |
-| Tests | 155 (1 omitido) |
-| Líneas de `app.py` | ~2.400 |
-| Dependencias Python | 15 |
+| Herramientas | 28 |
+| Rutas HTTP | 35 |
+| Plantillas Jinja2 | 31 |
+| Tests | 183 (1 omitido) |
+| Líneas de `app.py` | ~2.700 |
+| Dependencias Python | 15 (sin cambios en v1.5) |
 | Puerto por defecto | 43210 |
-| Versión actual | 1.4 |
+| Versión actual | 1.5 |
 
 ---
 

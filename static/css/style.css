@@ -839,3 +839,174 @@ input[type="number"] {
         flex-direction: column;
     }
 }
+
+/* ─── Productividad (v1.5): lotes, historial y plantillas ────────── */
+.btn-secondary {
+    background: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-border);
+}
+
+.btn-secondary:hover {
+    background: var(--color-surface-alt);
+}
+
+.btn-small {
+    padding: var(--space-2) var(--space-4);
+    font-size: 0.9rem;
+}
+
+.alert-info {
+    background: var(--color-primary-light);
+    color: var(--color-text);
+    border: 1px solid var(--color-border-light);
+}
+
+.hint {
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+    margin-bottom: var(--space-6);
+}
+
+.form-field {
+    margin-bottom: var(--space-4);
+}
+
+.form-field label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+.form-field input[type="text"],
+.form-field input[type="search"],
+.form-field input[type="password"],
+.form-field input[type="number"],
+.form-field select {
+    width: 100%;
+    max-width: 360px;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    line-height: 1.4;
+    min-height: 44px;
+}
+
+.param-group {
+    border-top: 1px solid var(--color-border-lighter);
+    padding-top: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.param-group[hidden],
+.hint[hidden],
+.template-save-panel[hidden] {
+    display: none;
+}
+
+.param-group h2 {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-3);
+}
+
+.mode-selector-compact .mode-option {
+    display: inline-flex;
+    margin-right: var(--space-4);
+}
+
+.productivity-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+}
+
+.productivity-toolbar .form-field {
+    flex: 1 1 260px;
+    margin-bottom: 0;
+}
+
+.productivity-list {
+    display: grid;
+    gap: var(--space-4);
+}
+
+.productivity-item {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4) var(--space-6);
+}
+
+.productivity-item h3 {
+    font-size: 1.1rem;
+    margin-bottom: var(--space-1);
+}
+
+.productivity-item p {
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+    overflow-wrap: anywhere;
+}
+
+.productivity-meta {
+    color: var(--color-text-muted) !important;
+    font-size: 0.85rem !important;
+}
+
+.productivity-params {
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.productivity-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+
+.empty-state {
+    padding: var(--space-6);
+    text-align: center;
+    color: var(--color-text-light);
+    background: var(--color-surface);
+    border: 1px dashed var(--color-border-light);
+    border-radius: var(--radius-lg);
+}
+
+.template-save {
+    margin-top: var(--space-4);
+}
+
+.template-save-panel {
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-alt);
+    padding: var(--space-4);
+    margin-top: var(--space-2);
+    max-width: 420px;
+}
+
+.template-save-panel label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: var(--space-1);
+}
+
+.template-save-panel input[type="text"] {
+    width: 100%;
+    padding: var(--space-3) var(--space-4);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    min-height: 44px;
+    margin-bottom: var(--space-2);
+}
+
+.template-save-status {
+    font-size: 0.9rem;
+    margin-top: var(--space-2);
+    color: var(--color-success);
+}

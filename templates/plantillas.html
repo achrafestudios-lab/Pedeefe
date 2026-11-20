@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Plantillas reutilizables{% endblock %}
+
+{% block meta_description %}Guarda y reutiliza opciones de tus herramientas PDF favoritas solo en tu navegador con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🧩</span> Plantillas reutilizables</h1>
+    <p>Guarda las opciones que más usas y aplícalas con un clic. Una plantilla contiene
+       solo parámetros (por ejemplo, el ángulo de rotación o el texto de la marca de agua):
+       <strong>nunca guarda archivos ni contraseñas</strong>.</p>
+
+    <div class="alert alert-warning" role="note">
+        Las plantillas caducan a los {{ template_days }} días y se limitan a {{ template_max }} entradas.
+        Se almacenan en <code>localStorage</code> de este navegador y no se envían a ningún servidor.
+    </div>
+
+    <noscript>
+        <div class="alert alert-error" role="alert">
+            Esta página necesita JavaScript para leer las plantillas guardadas en tu navegador.
+        </div>
+    </noscript>
+
+    <div class="alert alert-info" role="note">
+        Para crear una plantilla, abre cualquier herramienta con opciones y pulsa
+        <strong>«Guardar como plantilla»</strong> junto al botón de envío.
+    </div>
+
+    <div class="productivity-toolbar">
+        <button type="button" class="btn btn-secondary btn-small" id="templates-clear">
+            Borrar plantillas
+        </button>
+    </div>
+
+    <div id="template-list" class="productivity-list"
+         data-ttl-days="{{ template_days }}" data-max="{{ template_max }}">
+        <p class="empty-state">Cargando plantillas…</p>
+    </div>
+</section>
+{% endblock %}

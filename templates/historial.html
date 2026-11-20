@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Historial local{% endblock %}
+
+{% block meta_description %}Consulta y borra el historial de operaciones guardado solo en tu navegador con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🕘</span> Historial local</h1>
+    <p>Últimos envíos realizados desde este navegador. Solo se guardan nombres de archivo,
+       la herramienta usada y sus opciones: <strong>nunca el contenido de tus PDFs</strong>.</p>
+
+    <div class="alert alert-warning" role="note">
+        Los datos caducan a los {{ history_days }} días y se limitan a {{ history_max }} entradas.
+        Viven en <code>localStorage</code> de este navegador: no hay servidor, cuenta ni base de datos.
+        Para volver a procesar un archivo debes seleccionarlo de nuevo.
+    </div>
+
+    <noscript>
+        <div class="alert alert-error" role="alert">
+            Esta página necesita JavaScript para leer el historial guardado en tu navegador.
+        </div>
+    </noscript>
+
+    <div class="productivity-toolbar">
+        <div class="form-field">
+            <label for="history-search">Buscar en el historial</label>
+            <input type="search" id="history-search" placeholder="Herramienta o nombre de archivo">
+        </div>
+        <button type="button" class="btn btn-secondary btn-small" id="history-clear">
+            Borrar historial
+        </button>
+    </div>
+
+    <div id="history-list" class="productivity-list"
+         data-ttl-days="{{ history_days }}" data-max="{{ history_max }}">
+        <p class="empty-state">Cargando historial…</p>
+    </div>
+</section>
+{% endblock %}

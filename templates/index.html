@@ -139,5 +139,20 @@
         <h3>Comparar PDF</h3>
         <p>Resalta las diferencias de texto entre dos documentos.</p>
     </a>
+    <a href="{{ url_for('lotes') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🧰</span>
+        <h3>Lotes PDF</h3>
+        <p>Aplica una operación a varios PDFs y descarga un ZIP.</p>
+    </a>
+    <a href="{{ url_for('historial') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🕘</span>
+        <h3>Historial local</h3>
+        <p>Consulta las operaciones recientes guardadas en tu navegador.</p>
+    </a>
+    <a href="{{ url_for('plantillas') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🧩</span>
+        <h3>Plantillas</h3>
+        <p>Reutiliza las opciones que más usas, sin guardar archivos.</p>
+    </a>
 </section>
 {% endblock %}

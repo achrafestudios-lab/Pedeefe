@@ -100,6 +100,18 @@
                 </div>
             </div>
 
+            {# Grupo: Productividad (v1.5) #}
+            <div class="nav-group">
+                <button type="button" class="nav-group-toggle {% if request.endpoint in ['lotes', 'historial', 'plantillas'] %}active{% endif %}"
+                        data-group="productividad" aria-expanded="false" aria-controls="panel-productividad"
+                        aria-haspopup="true">Productividad ▾</button>
+                <div class="nav-panel" id="panel-productividad" hidden>
+                    <a href="{{ url_for('lotes') }}" {% if request.endpoint == 'lotes' %}aria-current="page"{% endif %}><span aria-hidden="true">🧰</span> Lotes PDF</a>
+                    <a href="{{ url_for('historial') }}" {% if request.endpoint == 'historial' %}aria-current="page"{% endif %}><span aria-hidden="true">🕘</span> Historial local</a>
+                    <a href="{{ url_for('plantillas') }}" {% if request.endpoint == 'plantillas' %}aria-current="page"{% endif %}><span aria-hidden="true">🧩</span> Plantillas</a>
+                </div>
+            </div>
+
             {# Desplegable: Todas las herramientas #}
             <div class="nav-group">
                 <button type="button" class="nav-group-toggle" data-group="todas"
@@ -152,6 +164,12 @@
                         <a href="{{ url_for('censurar') }}" {% if request.endpoint == 'censurar' %}aria-current="page"{% endif %}><span aria-hidden="true">🖤</span> Censurar PDF</a>
                         <a href="{{ url_for('comparar') }}" {% if request.endpoint == 'comparar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔎</span> Comparar PDF</a>
                     </div>
+                    <div class="nav-column">
+                        <span class="nav-column-title">Productividad</span>
+                        <a href="{{ url_for('lotes') }}" {% if request.endpoint == 'lotes' %}aria-current="page"{% endif %}><span aria-hidden="true">🧰</span> Lotes PDF</a>
+                        <a href="{{ url_for('historial') }}" {% if request.endpoint == 'historial' %}aria-current="page"{% endif %}><span aria-hidden="true">🕘</span> Historial local</a>
+                        <a href="{{ url_for('plantillas') }}" {% if request.endpoint == 'plantillas' %}aria-current="page"{% endif %}><span aria-hidden="true">🧩</span> Plantillas</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -166,5 +184,6 @@
     </footer>
 
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/productivity.js') }}"></script>
 </body>
 </html>

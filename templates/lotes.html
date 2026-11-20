@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Lotes PDF{% endblock %}
+
+{% block meta_description %}Aplica una misma operación a varios PDFs y descarga todos los resultados en un ZIP, procesando en local con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🧰</span> Lotes PDF</h1>
+    <p>Aplica la misma operación a varios PDFs y descarga todos los resultados en un ZIP.</p>
+
+    <div class="alert alert-warning" role="note">
+        <strong>Límites del lote:</strong> hasta {{ limits.files }} archivos,
+        {{ limits.pages }} páginas en total y {{ limits.total_mb }} MB por petición.
+        Estos topes evitan que el procesamiento agote la memoria o el procesador.
+    </div>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('lotes') }}" method="POST" enctype="multipart/form-data"
+          class="upload-form" data-tool="Lotes PDF">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tus PDFs aquí o haz clic para seleccionarlos</p>
+            <input type="file" name="files" accept=".pdf" id="fileInput" multiple
+                   aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>
+            Selecciona al menos un archivo para continuar.
+        </div>
+        <div id="fileList" class="file-list"></div>
+
+        {% set operation_info = {
+            'rotar': ['🔄', 'Rotar', 'Gira todas las páginas 90°, 180° o 270°.'],
+            'optimizar': ['📦', 'Optimizar', 'Reescribe la estructura de cada PDF.'],
+            'proteger': ['🔒', 'Proteger', 'Añade la misma contraseña a todos los PDFs.'],
+            'desproteger': ['🔓', 'Desproteger', 'Quita la contraseña con una clave común.'],
+            'marcar_agua': ['💧', 'Marca de agua', 'Añade el mismo texto a cada página.'],
+            'numerar': ['🔢', 'Numerar', 'Numera las páginas desde el número que indiques.']
+        } %}
+        <fieldset class="mode-selector">
+            <legend>Operación del lote</legend>
+            {% for op in operations %}
+            <label class="mode-option">
+                <input type="radio" name="operation" value="{{ op }}"
+                       {% if operation == op %}checked{% endif %}>
+                <span class="mode-label">
+                    <span class="mode-icon" aria-hidden="true">{{ operation_info[op][0] }}</span>
+                    <span>
+                        <strong>{{ operation_info[op][1] }}</strong>
+                        <small>{{ operation_info[op][2] }}</small>
+                    </span>
+                </span>
+            </label>
+            {% endfor %}
+        </fieldset>
+
+        <div class="param-group" data-operation-params="rotar">
+            <h2>Ángulo de rotación</h2>
+            <fieldset class="mode-selector mode-selector-compact">
+                <legend>Ángulo</legend>
+                {% for value, label in [('90', '90°'), ('180', '180°'), ('270', '270°')] %}
+                <label class="mode-option">
+                    <input type="radio" name="angle" value="{{ value }}"
+                           {% if angle|default('90') == value %}checked{% endif %}>
+                    <span class="mode-label"><strong>{{ label }}</strong></span>
+                </label>
+                {% endfor %}
+            </fieldset>
+        </div>
+
+        <div class="param-group" data-operation-params="proteger">
+            <h2>Contraseña</h2>
+            <div class="form-field">
+                <label for="batch-password">Contraseña para los PDFs</label>
+                <input type="password" name="password" id="batch-password" autocomplete="new-password">
+            </div>
+            <div class="form-field">
+                <label for="batch-password-confirm">Repite la contraseña</label>
+                <input type="password" name="password_confirm" id="batch-password-confirm"
+                       autocomplete="new-password">
+            </div>
+        </div>
+
+        <div class="param-group" data-operation-params="desproteger">
+            <h2>Contraseña</h2>
+            <div class="form-field">
+                <label for="batch-unlock-password">Contraseña actual de los PDFs</label>
+                <input type="password" name="password" id="batch-unlock-password"
+                       autocomplete="current-password">
+            </div>
+        </div>
+
+        <div class="param-group" data-operation-params="marcar_agua">
+            <h2>Texto de la marca de agua</h2>
+            <div class="form-field">
+                <label for="batch-watermark">Texto</label>
+                <input type="text" name="watermark_text" id="batch-watermark" maxlength="120"
+                       value="{{ watermark_text|default('') }}" placeholder="Ej.: CONFIDENCIAL">
+            </div>
+        </div>
+
+        <div class="param-group" data-operation-params="numerar">
+            <h2>Numeración</h2>
+            <div class="form-field">
+                <label for="batch-position">Posición del número</label>
+                <select name="position" id="batch-position">
+                    {% for value, label in [
+                        ('bottom_center', 'Abajo, centro'), ('bottom_right', 'Abajo, derecha'),
+                        ('bottom_left', 'Abajo, izquierda'), ('top_center', 'Arriba, centro'),
+                        ('top_right', 'Arriba, derecha'), ('top_left', 'Arriba, izquierda')
+                    ] %}
+                    <option value="{{ value }}" {% if position|default('bottom_center') == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-field">
+                <label for="batch-start">Número inicial</label>
+                <input type="number" name="start_num" id="batch-start" min="1" max="99999"
+                       value="{{ start_num|default('1') }}">
+            </div>
+        </div>
+
+        <p class="hint" data-operation-params="optimizar" hidden>
+            Optimizar no necesita opciones adicionales.
+        </p>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Procesar lote</button>
+    </form>
+</section>
+
+<script>
+    (function () {
+        const inputs = document.querySelectorAll('input[name="operation"]');
+        const groups = document.querySelectorAll('[data-operation-params]');
+        const fileInput = document.getElementById("fileInput");
+        const fileList = document.getElementById("fileList");
+        const submitBtn = document.getElementById("submitBtn");
+
+        function updateOperation() {
+            const selected = document.querySelector('input[name="operation"]:checked');
+            if (!selected) return;
+            groups.forEach(function (group) {
+                group.hidden = group.dataset.operationParams !== selected.value;
+            });
+        }
+
+        inputs.forEach(function (input) {
+            input.addEventListener("change", updateOperation);
+        });
+        updateOperation();
+
+        fileInput.addEventListener("change", function () {
+            fileList.textContent = "";
+            const files = fileInput.files;
+            submitBtn.disabled = files.length === 0;
+            for (const file of files) {
+                const item = document.createElement("div");
+                item.className = "file-item";
+                item.textContent = file.name;
+                fileList.appendChild(item);
+            }
+        });
+        submitBtn.disabled = true;
+    })();
+</script>
+{% endblock %}
