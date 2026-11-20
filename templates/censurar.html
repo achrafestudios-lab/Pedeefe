@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}Censurar PDF{% endblock %}
+
+
+{% block meta_description %}Elimina de forma permanente términos concretos de un PDF con Pedeefe, procesando el archivo en tu máquina.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🖤</span> Censurar PDF</h1>
+    <p>Borra palabras o frases de todas las páginas. La censura es real: el texto
+       se elimina del documento, no se cubre con una caja.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('censurar') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="terms">Términos a censurar</label>
+            <textarea name="terms" id="terms" rows="5" placeholder="Confidencial&#10;Nombre de persona&#10;número de contrato" required></textarea>
+            <small>Un término por línea. También puedes separarlos con comas o punto y coma. Se buscarán en todas las páginas.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Censurar PDF</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const termsInput = document.getElementById("terms");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+    termsInput.addEventListener("input", validateForm);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        for (const file of fileInput.files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+        validateForm();
+    }
+
+    function validateForm() {
+        submitBtn.disabled = !(fileInput.files.length > 0 && termsInput.value.trim() !== "");
+    }
+
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

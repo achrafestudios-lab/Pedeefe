@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Comparar PDF{% endblock %}
+
+
+{% block meta_description %}Compara el texto de dos PDFs página a página y resalta las diferencias, sin subir los archivos a internet.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🔎</span> Comparar PDF</h1>
+    <p>Compara el texto de dos documentos página a página. Las diferencias se
+       resaltan en verde (añadido) y rojo (eliminado).</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('comparar') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone1" role="button" tabindex="0" aria-labelledby="dropZoneText1">
+            <p id="dropZoneText1">Arrastra el PDF original aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file1" accept=".pdf" id="fileInput1" aria-labelledby="dropZoneText1">
+        </div>
+        <div id="fileList1" class="file-list"></div>
+
+        <div class="drop-zone" id="dropZone2" role="button" tabindex="0" aria-labelledby="dropZoneText2">
+            <p id="dropZoneText2">Arrastra el PDF a comparar aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file2" accept=".pdf" id="fileInput2" aria-labelledby="dropZoneText2">
+        </div>
+        <div id="fileList2" class="file-list"></div>
+
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona los dos PDF para continuar.</div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Comparar PDFs</button>
+    </form>
+</section>
+
+{% if success %}
+<section class="result-box" aria-live="polite">
+    <h2>Resultado</h2>
+    <p>
+        <strong>{{ file1_name }}</strong> frente a <strong>{{ file2_name }}</strong>:
+        {{ changed }} de {{ total }} páginas con cambios.
+    </p>
+    {% if truncated %}
+    <p class="alert alert-warning">Se muestran las primeras {{ total }} páginas. Compara documentos más cortos para ver el resto.</p>
+    {% endif %}
+
+    {% for item in diffs %}
+    <article class="diff-page">
+        <h3>Página {{ item.page }} — {% if item.changed %}con cambios{% else %}sin cambios{% endif %}</h3>
+        <div class="diff-wrapper">{{ item.table|safe }}</div>
+    </article>
+    {% endfor %}
+</section>
+{% endif %}
+
+<script>
+    const input1 = document.getElementById("fileInput1");
+    const input2 = document.getElementById("fileInput2");
+    const submitBtn = document.getElementById("submitBtn");
+
+    function updateList(input, listId) {
+        const list = document.getElementById(listId);
+        list.innerHTML = "";
+        for (const file of input.files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            list.appendChild(item);
+        }
+    }
+
+    function validateForm() {
+        submitBtn.disabled = !(input1.files.length > 0 && input2.files.length > 0);
+    }
+
+    input1.addEventListener("change", function () {
+        updateList(input1, "fileList1");
+        validateForm();
+    });
+    input2.addEventListener("change", function () {
+        updateList(input2, "fileList2");
+        validateForm();
+    });
+
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

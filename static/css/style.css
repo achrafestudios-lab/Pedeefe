@@ -526,6 +526,53 @@ body {
     margin: 0 auto;
 }
 
+/* ─── Comparación de PDF (v1.4) ────────────────────────────────── */
+.diff-page {
+    margin-top: var(--space-6);
+    background: var(--color-surface, #fff);
+    border: 1px solid var(--color-border, #d9d9d9);
+    border-radius: var(--radius-md, 8px);
+    padding: var(--space-4);
+}
+
+.diff-page h3 {
+    font-size: 1rem;
+    margin-bottom: var(--space-3);
+}
+
+.diff-wrapper {
+    overflow-x: auto;
+}
+
+table.diff {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.8rem;
+}
+
+table.diff th.diff_header {
+    background: var(--color-bg-alt, #f4f4f4);
+    text-align: left;
+    padding: 0.3rem 0.5rem;
+}
+
+table.diff td {
+    padding: 0.15rem 0.4rem;
+    vertical-align: top;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+table.diff td.diff_add { background: #e6ffed; }
+table.diff td.diff_sub { background: #ffeef0; }
+table.diff td.diff_chg { background: #fff5b1; }
+table.diff td.diff_next {
+    background: #f4f4f4;
+    color: #999;
+    text-align: center;
+}
+
 /* ─── Foco visible (R-12) ──────────────────────────────────────── */
 a:focus-visible,
 button:focus-visible,

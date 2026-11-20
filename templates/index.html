@@ -124,5 +124,20 @@
         <h3>Numerar páginas</h3>
         <p>Añade números de página a tu PDF.</p>
     </a>
+    <a href="{{ url_for('firmar') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">✍️</span>
+        <h3>Firmar PDF</h3>
+        <p>Añade una firma digital con tu certificado PKCS#12.</p>
+    </a>
+    <a href="{{ url_for('censurar') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🖤</span>
+        <h3>Censurar PDF</h3>
+        <p>Elimina de forma permanente palabras o frases del documento.</p>
+    </a>
+    <a href="{{ url_for('comparar') }}" class="tool-card">
+        <span class="tool-icon" aria-hidden="true">🔎</span>
+        <h3>Comparar PDF</h3>
+        <p>Resalta las diferencias de texto entre dos documentos.</p>
+    </a>
 </section>
 {% endblock %}

@@ -3,6 +3,7 @@ import uuid
 import shutil
 import subprocess
 import zipfile
+import difflib
 from io import BytesIO
 from flask import Flask, render_template, request, send_file, abort
 from pypdf import PdfReader, PdfWriter
@@ -41,6 +42,15 @@ try:
     from weasyprint import HTML as WeasyHTML
 except Exception:  # pragma: no cover
     WeasyHTML = None
+# Firma criptográfica (v1.4). Se degrada con un mensaje legible si falta.
+try:
+    from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+    from pyhanko.sign import signers as pyhanko_signers
+    from pyhanko.sign.signers import PdfSignatureMetadata
+except Exception:  # pragma: no cover
+    IncrementalPdfFileWriter = None
+    pyhanko_signers = None
+    PdfSignatureMetadata = None
 
 # pytesseract requiere Tesseract OCR instalado en el sistema:
 #   Ubuntu/Debian: sudo apt install tesseract-ocr
@@ -187,6 +197,9 @@ REFERER_TO_TEMPLATE = {
     "/excel-a-pdf": "excel_a_pdf.html",
     "/powerpoint-a-pdf": "powerpoint_a_pdf.html",
     "/html-a-pdf": "html_a_pdf.html",
+    "/firmar": "firmar.html",
+    "/censurar": "censurar.html",
+    "/comparar": "comparar.html",
 }
 
 
@@ -2172,6 +2185,236 @@ def descargar_pdf_convertido(token):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
     try:
         return send_file(output_path, as_attachment=True, download_name="convertido.pdf")
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── v1.4 · Firma, censura y comparación ──────────────────────────────
+
+MAX_COMPARE_PAGES = 100
+
+
+def _page_texts(pdf_path):
+    """Devuelve el texto extraído de cada página de un PDF."""
+    reader = PdfReader(pdf_path)
+    return [page.extract_text() or "" for page in reader.pages]
+
+
+@app.route("/firmar", methods=["GET", "POST"])
+def firmar():
+    if request.method == "GET":
+        return render_template("firmar.html")
+
+    pdf_file = request.files.get("file")
+    cert_file = request.files.get("certificate")
+    password = request.form.get("password", "")
+
+    if not pdf_file or pdf_file.filename == "":
+        return render_template("firmar.html", error="Selecciona el PDF que quieres firmar.")
+    if not cert_file or cert_file.filename == "":
+        return render_template("firmar.html", error="Selecciona tu certificado digital (.p12 o .pfx).")
+    if not allowed_file(pdf_file.filename):
+        return render_template("firmar.html", error="El archivo seleccionado no es un PDF.")
+
+    cert_name = cert_file.filename.lower()
+    if not (cert_name.endswith(".p12") or cert_name.endswith(".pfx")):
+        return render_template(
+            "firmar.html",
+            error="El certificado debe ser un archivo PKCS#12 (.p12 o .pfx).",
+        )
+
+    size_error = validate_file_size(pdf_file, "firmar.html")
+    if size_error:
+        return size_error
+    size_error = validate_file_size(cert_file, "firmar.html", "El certificado")
+    if size_error:
+        return size_error
+
+    if IncrementalPdfFileWriter is None:
+        return render_template(
+            "firmar.html",
+            error="La firma digital no está disponible. Instala las dependencias del proyecto.",
+        )
+
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
+        pdf_file.save(filepath)
+        if not validate_pdf(filepath):
+            return render_template("firmar.html", error="El archivo no es un PDF válido.")
+
+        cert_data = cert_file.read()
+        if not cert_data:
+            return render_template("firmar.html", error="El certificado está vacío.")
+
+        signer = pyhanko_signers.SimpleSigner.load_pkcs12_data(
+            cert_data,
+            other_certs=[],
+            passphrase=password.encode("utf-8") if password else None,
+        )
+        signature = PdfSignatureMetadata(
+            field_name="Firma",
+            reason="Firmado digitalmente con Pedeefe",
+            name="Pedeefe",
+        )
+        signed = BytesIO()
+        with open(filepath, "rb") as src:
+            writer = IncrementalPdfFileWriter(src)
+            pyhanko_signers.sign_pdf(writer, signature, signer=signer, output=signed)
+
+        output_path = os.path.join(temp_dir, "firmado.pdf")
+        with open(output_path, "wb") as dst:
+            dst.write(signed.getvalue())
+        return send_file(output_path, as_attachment=True, download_name="firmado.pdf")
+    except Exception:
+        return render_template(
+            "firmar.html",
+            error="No se pudo firmar el PDF. Comprueba que el certificado y su contraseña sean correctos.",
+        )
+    finally:
+        cleanup_folder(temp_dir)
+
+
+@app.route("/censurar", methods=["GET", "POST"])
+def censurar():
+    if request.method == "GET":
+        return render_template("censurar.html")
+
+    pdf_file = request.files.get("file")
+    terms_raw = request.form.get("terms", "")
+    if not pdf_file or pdf_file.filename == "":
+        return render_template("censurar.html", error="Selecciona el PDF que quieres censurar.")
+    if not allowed_file(pdf_file.filename):
+        return render_template("censurar.html", error="El archivo seleccionado no es un PDF.")
+
+    terms = [
+        term.strip()
+        for term in terms_raw.replace(",", "\n").replace(";", "\n").splitlines()
+        if term.strip()
+    ]
+    if not terms:
+        return render_template(
+            "censurar.html",
+            error="Escribe al menos un término para censurar (uno por línea).",
+        )
+
+    size_error = validate_file_size(pdf_file, "censurar.html")
+    if size_error:
+        return size_error
+    if fitz is None:
+        return render_template(
+            "censurar.html",
+            error="La censura no está disponible. Instala las dependencias del proyecto.",
+        )
+
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
+        pdf_file.save(filepath)
+        if not validate_pdf(filepath):
+            return render_template("censurar.html", error="El archivo no es un PDF válido.")
+
+        output_path = os.path.join(temp_dir, "censurado.pdf")
+        matches = 0
+        with fitz.open(filepath) as doc:
+            for page in doc:
+                rects = []
+                for term in terms:
+                    rects.extend(page.search_for(term))
+                for rect in rects:
+                    page.add_redact_annot(rect, fill=(0, 0, 0))
+                if rects:
+                    page.apply_redactions()
+                matches += len(rects)
+            doc.save(output_path, garbage=4, deflate=True)
+
+        if matches == 0:
+            return render_template(
+                "censurar.html",
+                error="No se encontró ninguna coincidencia. Revisa los términos escritos.",
+            )
+        return send_file(output_path, as_attachment=True, download_name="censurado.pdf")
+    except Exception:
+        return render_template(
+            "censurar.html",
+            error="No se pudo censurar el PDF. Comprueba que el archivo no esté dañado.",
+        )
+    finally:
+        cleanup_folder(temp_dir)
+
+
+@app.route("/comparar", methods=["GET", "POST"])
+def comparar():
+    if request.method == "GET":
+        return render_template("comparar.html")
+
+    first = request.files.get("file1")
+    second = request.files.get("file2")
+    if not first or first.filename == "":
+        return render_template("comparar.html", error="Selecciona el primer PDF.")
+    if not second or second.filename == "":
+        return render_template("comparar.html", error="Selecciona el segundo PDF.")
+
+    for upload, label in ((first, "El primer PDF"), (second, "El segundo PDF")):
+        if not allowed_file(upload.filename):
+            return render_template("comparar.html", error=f"{label} no es un PDF.")
+        size_error = validate_file_size(upload, "comparar.html", label)
+        if size_error:
+            return size_error
+
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        paths = []
+        for upload in (first, second):
+            path = os.path.join(temp_dir, f"{uuid.uuid4()}.pdf")
+            upload.save(path)
+            if not validate_pdf(path):
+                return render_template(
+                    "comparar.html", error="Uno de los archivos no es un PDF válido."
+                )
+            paths.append(path)
+
+        texts = [_page_texts(path) for path in paths]
+        total_pages = max(len(texts[0]), len(texts[1]))
+        shown_pages = min(total_pages, MAX_COMPARE_PAGES)
+        differ = difflib.HtmlDiff(wrapcolumn=78)
+        diffs = []
+        for index in range(shown_pages):
+            lines1 = (texts[0][index] if index < len(texts[0]) else "").splitlines()
+            lines2 = (texts[1][index] if index < len(texts[1]) else "").splitlines()
+            diffs.append(
+                {
+                    "page": index + 1,
+                    "changed": lines1 != lines2,
+                    "table": differ.make_table(
+                        lines1,
+                        lines2,
+                        fromdesc="PDF 1",
+                        todesc="PDF 2",
+                        context=True,
+                        numlines=2,
+                    ),
+                }
+            )
+
+        return render_template(
+            "comparar.html",
+            success=True,
+            diffs=diffs,
+            changed=sum(1 for item in diffs if item["changed"]),
+            total=shown_pages,
+            truncated=total_pages > shown_pages,
+            file1_name=first.filename,
+            file2_name=second.filename,
+        )
+    except Exception:
+        return render_template(
+            "comparar.html",
+            error="No se pudo comparar los PDF. Comprueba que no estén cifrados ni dañados.",
+        )
     finally:
         cleanup_folder(temp_dir)
 

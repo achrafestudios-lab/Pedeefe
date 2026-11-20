@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}Firmar PDF{% endblock %}
+
+
+{% block meta_description %}Firma un PDF con tu certificado digital PKCS#12 sin subirlo a internet, con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">✍️</span> Firmar PDF</h1>
+    <p>Añade una firma digital criptográfica con tu certificado PKCS#12 (.p12 o .pfx).
+       El documento se procesa en tu máquina y el certificado no se conserva.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <form action="{{ url_for('firmar') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra el PDF que quieres firmar aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <div class="range-input">
+            <label for="certificate">Certificado digital (PKCS#12)</label>
+            <input type="file" name="certificate" accept=".p12,.pfx" id="certificate" required>
+            <small>Selecciona tu archivo <code>.p12</code> o <code>.pfx</code>. Solo se usa durante la firma.</small>
+        </div>
+
+        <div class="range-input">
+            <label for="password">Contraseña del certificado</label>
+            <div style="display:flex; gap:0.5rem; align-items:center;">
+                <input type="password" name="password" id="password" placeholder="Contraseña del certificado (si tiene)" style="flex:1;">
+                <button type="button" id="togglePassword" class="btn btn-secondary" aria-label="Mostrar contraseña" aria-pressed="false">👁</button>
+            </div>
+            <small>Déjalo en blanco si tu certificado no tiene contraseña.</small>
+        </div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Firmar PDF</button>
+    </form>
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const certInput = document.getElementById("certificate");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+    const passwordInput = document.getElementById("password");
+    const toggleBtn = document.getElementById("togglePassword");
+
+    fileInput.addEventListener("change", updateFileList);
+    certInput.addEventListener("change", validateForm);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        for (const file of fileInput.files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+        validateForm();
+    }
+
+    function validateForm() {
+        submitBtn.disabled = !(fileInput.files.length > 0 && certInput.files.length > 0);
+    }
+
+    toggleBtn.addEventListener("click", () => {
+        const showing = passwordInput.type === "text";
+        passwordInput.type = showing ? "password" : "text";
+        toggleBtn.setAttribute("aria-pressed", String(!showing));
+        toggleBtn.setAttribute("aria-label", showing ? "Mostrar contraseña" : "Ocultar contraseña");
+        toggleBtn.textContent = showing ? "👁" : "🙈";
+    });
+
+    submitBtn.disabled = true;
+</script>
+{% endblock %}

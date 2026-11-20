@@ -42,18 +42,25 @@
 
             {# Grupo: Convertir (a/desde PDF) #}
             <div class="nav-group">
-                <button type="button" class="nav-group-toggle {% if request.endpoint in ['imagen_a_pdf', 'pdf_a_imagen', 'pdf_a_word'] %}active{% endif %}"
+                <button type="button" class="nav-group-toggle {% if request.endpoint in ['imagen_a_pdf', 'word_a_pdf', 'excel_a_pdf', 'powerpoint_a_pdf', 'html_a_pdf', 'pdf_a_imagen', 'pdf_a_word', 'pdf_a_excel', 'pdf_a_powerpoint', 'pdf_a_html'] %}active{% endif %}"
                         data-group="convertir" aria-expanded="false" aria-controls="panel-convertir"
                         aria-haspopup="true">Convertir ▾</button>
                 <div class="nav-panel nav-panel-columns" id="panel-convertir" hidden>
                     <div class="nav-column">
                         <span class="nav-column-title">Convertir a PDF</span>
                         <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> Imágenes a PDF</a>
+                        <a href="{{ url_for('word_a_pdf') }}" {% if request.endpoint == 'word_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📄</span> Word a PDF</a>
+                        <a href="{{ url_for('excel_a_pdf') }}" {% if request.endpoint == 'excel_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📈</span> Excel a PDF</a>
+                        <a href="{{ url_for('powerpoint_a_pdf') }}" {% if request.endpoint == 'powerpoint_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span> PowerPoint a PDF</a>
+                        <a href="{{ url_for('html_a_pdf') }}" {% if request.endpoint == 'html_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🌐</span> HTML a PDF</a>
                     </div>
                     <div class="nav-column">
                         <span class="nav-column-title">Convertir desde PDF</span>
                         <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> PDF a Imagen</a>
                         <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span> PDF a Word</a>
+                        <a href="{{ url_for('pdf_a_excel') }}" {% if request.endpoint == 'pdf_a_excel' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span> PDF a Excel</a>
+                        <a href="{{ url_for('pdf_a_powerpoint') }}" {% if request.endpoint == 'pdf_a_powerpoint' %}aria-current="page"{% endif %}><span aria-hidden="true">📽️</span> PDF a PowerPoint</a>
+                        <a href="{{ url_for('pdf_a_html') }}" {% if request.endpoint == 'pdf_a_html' %}aria-current="page"{% endif %}><span aria-hidden="true">🌐</span> PDF a HTML</a>
                     </div>
                 </div>
             </div>
@@ -81,6 +88,18 @@
                 </div>
             </div>
 
+            {# Grupo: Funciones avanzadas (v1.4) #}
+            <div class="nav-group">
+                <button type="button" class="nav-group-toggle {% if request.endpoint in ['firmar', 'censurar', 'comparar'] %}active{% endif %}"
+                        data-group="avanzadas" aria-expanded="false" aria-controls="panel-avanzadas"
+                        aria-haspopup="true">Avanzadas ▾</button>
+                <div class="nav-panel" id="panel-avanzadas" hidden>
+                    <a href="{{ url_for('firmar') }}" {% if request.endpoint == 'firmar' %}aria-current="page"{% endif %}><span aria-hidden="true">✍️</span> Firmar PDF</a>
+                    <a href="{{ url_for('censurar') }}" {% if request.endpoint == 'censurar' %}aria-current="page"{% endif %}><span aria-hidden="true">🖤</span> Censurar PDF</a>
+                    <a href="{{ url_for('comparar') }}" {% if request.endpoint == 'comparar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔎</span> Comparar PDF</a>
+                </div>
+            </div>
+
             {# Desplegable: Todas las herramientas #}
             <div class="nav-group">
                 <button type="button" class="nav-group-toggle" data-group="todas"
@@ -103,11 +122,18 @@
                     <div class="nav-column">
                         <span class="nav-column-title">Convertir a PDF</span>
                         <a href="{{ url_for('imagen_a_pdf') }}" {% if request.endpoint == 'imagen_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> Imágenes a PDF</a>
+                        <a href="{{ url_for('word_a_pdf') }}" {% if request.endpoint == 'word_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📄</span> Word a PDF</a>
+                        <a href="{{ url_for('excel_a_pdf') }}" {% if request.endpoint == 'excel_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📈</span> Excel a PDF</a>
+                        <a href="{{ url_for('powerpoint_a_pdf') }}" {% if request.endpoint == 'powerpoint_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span> PowerPoint a PDF</a>
+                        <a href="{{ url_for('html_a_pdf') }}" {% if request.endpoint == 'html_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🌐</span> HTML a PDF</a>
                     </div>
                     <div class="nav-column">
                         <span class="nav-column-title">Convertir desde PDF</span>
                         <a href="{{ url_for('pdf_a_imagen') }}" {% if request.endpoint == 'pdf_a_imagen' %}aria-current="page"{% endif %}><span aria-hidden="true">🖼️</span> PDF a Imagen</a>
                         <a href="{{ url_for('pdf_a_word') }}" {% if request.endpoint == 'pdf_a_word' %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span> PDF a Word</a>
+                        <a href="{{ url_for('pdf_a_excel') }}" {% if request.endpoint == 'pdf_a_excel' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span> PDF a Excel</a>
+                        <a href="{{ url_for('pdf_a_powerpoint') }}" {% if request.endpoint == 'pdf_a_powerpoint' %}aria-current="page"{% endif %}><span aria-hidden="true">📽️</span> PDF a PowerPoint</a>
+                        <a href="{{ url_for('pdf_a_html') }}" {% if request.endpoint == 'pdf_a_html' %}aria-current="page"{% endif %}><span aria-hidden="true">🌐</span> PDF a HTML</a>
                     </div>
                     <div class="nav-column">
                         <span class="nav-column-title">Editar PDF</span>
@@ -119,6 +145,12 @@
                         <span class="nav-column-title">Seguridad de PDF</span>
                         <a href="{{ url_for('proteger') }}" {% if request.endpoint == 'proteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔒</span> Proteger PDF</a>
                         <a href="{{ url_for('desproteger') }}" {% if request.endpoint == 'desproteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔓</span> Desproteger PDF</a>
+                    </div>
+                    <div class="nav-column">
+                        <span class="nav-column-title">Avanzadas</span>
+                        <a href="{{ url_for('firmar') }}" {% if request.endpoint == 'firmar' %}aria-current="page"{% endif %}><span aria-hidden="true">✍️</span> Firmar PDF</a>
+                        <a href="{{ url_for('censurar') }}" {% if request.endpoint == 'censurar' %}aria-current="page"{% endif %}><span aria-hidden="true">🖤</span> Censurar PDF</a>
+                        <a href="{{ url_for('comparar') }}" {% if request.endpoint == 'comparar' %}aria-current="page"{% endif %}><span aria-hidden="true">🔎</span> Comparar PDF</a>
                     </div>
                 </div>
             </div>

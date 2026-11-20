@@ -27,7 +27,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/tests-140%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-155%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -75,9 +75,10 @@
 
 ## ¿Qué es Pedeefe?
 
-Pedeefe es una aplicación web que reúne **22 herramientas para trabajar con
+Pedeefe es una aplicación web que reúne **25 herramientas para trabajar con
 PDFs**: unir, dividir, recortar, reordenar, optimizar, comprimir, convertir,
-rotar, numerar, marcar con agua, proteger y extraer texto mediante OCR.
+rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar y extraer
+texto mediante OCR.
 
 **Todo ocurre en tu máquina.** No hay servidor público, no hay exposición de
 red, no se envían archivos a ningún servicio externo y no hay base de datos.
@@ -86,8 +87,8 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 
 ### Características principales
 
-- 📄 **22 herramientas en un solo lugar.** Organización, conversión, edición,
-  optimización y seguridad.
+- 📄 **25 herramientas en un solo lugar.** Organización, conversión, edición,
+  optimización, seguridad y análisis.
 - 🔒 **100 % local y privado.** Los archivos nunca salen del equipo; se eliminan
   al terminar la operación o tras la descarga.
 - 🗜️ **Optimizar y Comprimir son cosas distintas.** *Optimizar* reescribe la
@@ -95,6 +96,8 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   de las imágenes y muestra el porcentaje conseguido.
 - 🔄 **Conversiones en ambos sentidos.** PDF ↔ Word, Excel, PowerPoint, HTML e
   imágenes, además de imágenes → PDF.
+- ✍️ **Firma, censura y comparación.** Firma criptográfica con certificado
+  PKCS#12, borrado real de texto y diferencias página a página.
 - ♿ **Accesible.** Navegación por grupos, manejo por teclado, foco visible,
   mensajes de error claros y contraste mejorado.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
@@ -111,7 +114,7 @@ con Docker y abriendo `http://localhost:43210`.
 
 | Vista | Descripción |
 |---|---|
-| Portada | Rejilla con las 22 herramientas y navegación desplegable por grupos |
+| Portada | Rejilla con las 25 herramientas y navegación desplegable por grupos |
 | Herramienta | Formulario de subida, opciones, resultado y descarga |
 | Resultado | Enlace de descarga temporal por token UUID para conversiones largas |
 
@@ -247,9 +250,16 @@ se valida tanto la extensión como el contenido real del archivo.
 | **Convertir desde PDF** | Imagen, Word, Excel, PowerPoint, HTML | `/pdf-a-imagen`, `/pdf-a-word`, `/pdf-a-excel`, `/pdf-a-powerpoint`, `/pdf-a-html` |
 | **Editar** | Rotar, Numerar, Marca de agua | `/rotar`, `/numerar`, `/marcar-agua` |
 | **Seguridad** | Proteger, Desproteger | `/proteger`, `/desproteger` |
+| **Avanzadas** | Firmar, Censurar, Comparar | `/firmar`, `/censurar`, `/comparar` |
 
 Notas de uso:
 
+- **Firmar** usa tu certificado PKCS#12 (.p12/.pfx) y genera una firma real
+  (`/ByteRange` + `/Sig`) con pyHanko. El certificado no se guarda.
+- **Censurar** elimina el texto coincidente del PDF; no se limita a taparlo.
+  Escribe un término por línea (también admite comas y punto y coma).
+- **Comparar** muestra las diferencias de texto página a página. En documentos
+  de más de 100 páginas solo se comparan las primeras 100.
 - **Dividir** permite extraer páginas sueltas o un rango.
 - **Recortar** conserva solo las páginas indicadas (`1-3,5,7-9`).
 - **Reordenar** acepta un orden (`3,1,2`) y permite duplicar páginas (`1,1,2`).
@@ -292,6 +302,9 @@ Notas de uso:
 | `GET`/`POST` | `/powerpoint-a-pdf` | PowerPoint → PDF |
 | `GET`/`POST` | `/html-a-pdf` | HTML → PDF |
 | `GET` | `/descargar_pdf/<token>` | Descarga el PDF convertido |
+| `GET`/`POST` | `/firmar` | Firma el PDF con un certificado PKCS#12 |
+| `GET`/`POST` | `/censurar` | Elimina términos del texto del PDF |
+| `GET`/`POST` | `/comparar` | Muestra diferencias de texto entre dos PDFs |
 
 Los archivos estáticos se sirven desde `/static/`.
 
@@ -334,14 +347,15 @@ persistencia entre reinicios.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 140 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 155 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
 |---|---|
 | `tests/test_smoke.py` | Rutas GET de la aplicación y estáticos |
 | `tests/test_tools.py` | Flujos completos y errores de las herramientas |
-| `tests/test_fase4.py` | Conversiones añadidas en la última fase |
+| `tests/test_fase4.py` | Conversiones a y desde Office/HTML |
+| `tests/test_fase5.py` | Firma real, censura y comparación de texto |
 
 Comprobaciones adicionales:
 
@@ -389,7 +403,7 @@ app.py                  Aplicación Flask: rutas, validación y procesamiento
 templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos
 static/js/main.js       Scripts compartidos
-tests/                  Suite unittest (humo + herramientas + conversiones)
+tests/                  Suite unittest (humo, herramientas, conversiones y v1.4)
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
 requirements.txt        Dependencias Python
@@ -481,6 +495,15 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v1.4 (Fase 5)
+- **Firmar PDF**: firma criptográfica con certificado PKCS#12 mediante pyHanko.
+- **Censurar PDF**: borrado real de palabras o frases en todas las páginas.
+- **Comparar PDF**: diferencias de texto resaltadas página a página.
+- Las tres herramientas se añaden a la portada, al menú «Avanzadas» y al
+  desplegable «Todas las herramientas»; las conversiones ya existentes también
+  quedan enlazadas en la navegación.
+- 15 tests nuevos (155 en total).
+
 ### v1.3 (Fase 4)
 - Conversiones añadidas: PDF → Excel, PowerPoint y HTML.
 - Conversiones a PDF: Word, Excel, PowerPoint y HTML.
@@ -516,7 +539,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.1 | Compresión real y OCR integrado | Completada |
 | v1.2 | Edición: recortar y reordenar | Completada |
 | v1.3 | Conversión PDF ↔ Office/HTML | Completada |
-| v1.4 | Seguridad avanzada: firmar, censurar, comparar | Planificada |
+| v1.4 | Seguridad avanzada: firmar, censurar, comparar | Completada |
 | v1.5 | Productividad: lotes, historial y plantillas | Planificada |
 | v1.6 | Plataforma: escritorio, API local y accesibilidad completa | Planificada |
 
@@ -536,7 +559,7 @@ a Markdown.
 | Interfaz en español | Sí | Sí | Sí | Sí | No |
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
-| 22 herramientas | Sí | Parcial | Parcial | Parcial | No |
+| 25 herramientas | Sí | Parcial | Parcial | Parcial | No |
 
 **Diferenciador clave:** Pedeefe es una caja de herramientas PDF en español,
 local y sin cuenta, con Docker listo y conversiones en ambos sentidos.
@@ -564,14 +587,14 @@ Pedeefe se construye sobre proyecto open source:
 
 | Métrica | Valor |
 |---|---|
-| Herramientas | 22 |
-| Rutas HTTP | 29 |
-| Plantillas | 25 |
-| Tests | 140 (1 omitido) |
-| Líneas de `app.py` | ~2.180 |
-| Dependencias Python | 14 |
+| Herramientas | 25 |
+| Rutas HTTP | 32 |
+| Plantillas | 28 |
+| Tests | 155 (1 omitido) |
+| Líneas de `app.py` | ~2.400 |
+| Dependencias Python | 15 |
 | Puerto por defecto | 43210 |
-| Versión actual | 1.3 |
+| Versión actual | 1.4 |
 
 ---
 
