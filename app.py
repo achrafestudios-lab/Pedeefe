@@ -3112,7 +3112,7 @@ def api_tools():
         })
     return jsonify({
         "ok": True,
-        "version": "2.0.1",
+        "version": "2.1.0",
         "count": len(tools),
         "tools": tools,
     })

@@ -133,7 +133,7 @@ class TestDesktopPackaging(unittest.TestCase):
             cls.config = json.load(handle)
 
     def test_version_and_scripts(self):
-        self.assertEqual(self.config["version"], "2.0.1")
+        self.assertEqual(self.config["version"], "2.1.0")
         self.assertEqual(self.config["desktopName"], "Pedeefe")
         for script in ("dist:linux", "dist:win", "dist:mac"):
             self.assertIn(script, self.config["scripts"])

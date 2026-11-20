@@ -179,9 +179,9 @@ Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.0.1-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.0.1-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.0.1-mac-x64.dmg` / `Pedeefe-2.0.1-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.1.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.1.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.1.0-mac-x64.dmg` / `Pedeefe-2.1.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -207,7 +207,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.0.1-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.1.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -696,6 +696,17 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v2.1.0 (rediseño visual)
+
+- **Interfaz nueva:** cabecera fija de 60 px, mega-menú de siete columnas, hero
+  centrado, filtro por categorías y rejilla de tarjetas, inspirada en la
+  plantilla de referencia pero con marca Pedeefe.
+- **Sin servicios externos:** 28 iconos SVG y fondo locales, sin fuentes Graphik,
+  analytics ni consent manager; cero peticiones a terceros.
+- **PWA y accesibilidad:** caché `pedeefe-v2.3-ui` ampliada con los assets nuevos
+  y Lighthouse 1,00 en `/` y `/unir`, también en modo oscuro.
+- Los instaladores de escritorio se regeneran como `2.1.0`.
+
 ### v2.0.1 (consolidación y hardening)
 
 - **Carpetas temporales privadas:** todas las peticiones crean su directorio
@@ -850,6 +861,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.9 | PWA instalable | Completada |
 | v2.0 | API y CLI local | Completada |
 | v2.0.1 | Consolidación y hardening | Completada |
+| v2.1.0 | Rediseño visual con marca Pedeefe | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -908,7 +920,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | Local, solo loopback, con token `0600` |
-| Versión actual | 2.0.1 |
+| Versión actual | 2.1.0 |
 
 ---
 
