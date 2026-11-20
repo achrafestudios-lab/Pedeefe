@@ -1,0 +1,48 @@
+{
+  "name": "pedeefe-desktop",
+  "productName": "Pedeefe",
+  "version": "1.7.0",
+  "private": true,
+  "description": "Pedeefe de escritorio: caja de herramientas PDF local",
+  "main": "electron/main.js",
+  "author": "ach.dev",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:linux": "electron-builder --linux"
+  },
+  "build": {
+    "appId": "dev.ach.pedeefe",
+    "productName": "Pedeefe",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "electron/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "backend-dist",
+        "to": "backend",
+        "filter": [
+          "pedeefe-backend*"
+        ]
+      },
+      {
+        "from": "../LICENSE",
+        "to": "LICENSE"
+      }
+    ],
+    "linux": {
+      "target": [
+        "AppImage"
+      ],
+      "category": "Office"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.4.1",
+    "electron-builder": "^26.18.0"
+  }
+}

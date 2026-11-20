@@ -27,7 +27,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/tests-197%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/escritorio-Linux-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
+  <img src="https://img.shields.io/badge/tests-203%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -47,6 +48,7 @@
 - [Características principales](#características-principales)
 - [Capturas de pantalla](#capturas-de-pantalla)
 - [Para usuarios](#para-usuarios)
+  - [App de escritorio (v1.7)](#opción-3-app-de-escritorio-v17)
 - [Instalación desde fuente](#instalación-desde-fuente)
 - [Requisitos del sistema](#requisitos-del-sistema)
 - [Formatos soportados](#formatos-soportados)
@@ -102,6 +104,8 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   foco visible, enlace «Saltar al contenido principal», mensajes anunciados a
   lectores de pantalla y contraste AA. El tema oscuro sigue la preferencia del
   sistema, sin interruptor ni datos guardados.
+- 🖥️ **App de escritorio (v1.7).** Una ventana local con el mismo backend; sin
+  navegador visible, puertos fijos ni servicios de red nuevos.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
@@ -157,6 +161,30 @@ python3 -m venv .venv
 
 Abre <http://127.0.0.1:43210>.
 
+### Opción 3: App de escritorio (v1.7)
+
+La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
+puerto efímero y un directorio de temporales propio dentro del perfil de la
+aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
+Por ahora se entrega para **Linux**; Windows y macOS vendrán en una versión
+posterior.
+
+Para construirla desde el repo necesitas Node.js 20+ y Python 3.12+:
+
+```bash
+cd desktop
+npm ci
+../.venv/bin/python -m pip install pyinstaller==6.22.3
+../.venv/bin/python -m PyInstaller --noconfirm --clean \
+  --distpath backend-dist --workpath build pedeefe-backend.spec
+npm run dist:linux
+```
+
+El AppImage queda en `desktop/dist/`. Para probar sin empaquetar, ejecuta
+`npm start` desde `desktop/` (usa el `.venv` del repo). PyInstaller es una
+herramienta de compilación: no se añade a `requirements.txt` ni se necesita para
+la app web o Docker.
+
 ### Requisitos mínimos
 
 | Recurso | Mínimo |
@@ -164,7 +192,7 @@ Abre <http://127.0.0.1:43210>.
 | CPU | 1 núcleo (2 recomendados para OCR y conversiones Office) |
 | RAM | 2 GB (OCR y PDF → Word pueden consumir más) |
 | Disco | ~500 MB para dependencias + espacio para los archivos temporales |
-| SO | Linux, macOS o Windows con Python; Docker en cualquier plataforma |
+| SO | Linux, macOS o Windows con Python; Docker en cualquier plataforma; AppImage de escritorio para Linux |
 | Navegador | Chrome, Firefox, Edge o Safari (moderno) |
 | Red | Ninguna una vez instalado |
 
@@ -374,7 +402,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 197 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 203 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -385,6 +413,7 @@ este entorno):
 | `tests/test_fase5.py` | Firma real, censura y comparación de texto |
 | `tests/test_fase6.py` | Lotes con ZIP, límites, errores y páginas de productividad |
 | `tests/test_a11y.py` | Accesibilidad, tema oscuro y regresiones de contraste |
+| `tests/test_desktop.py` | Sidecar local del escritorio y anuncio de URL |
 
 Comprobaciones adicionales:
 
@@ -433,7 +462,8 @@ templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos con tokens claros/oscuros (v1.6)
 static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
 static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.6)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.7)
+desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.7)
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
 requirements.txt        Dependencias Python
@@ -452,6 +482,7 @@ docs/                   Documentación técnica interna (no publicada)
 | `FLASK_HOST` | `127.0.0.1` | Interfaz de escucha (en Docker, `0.0.0.0`) |
 | `FLASK_DEBUG` | `0` | Activa el debugger de Werkzeug si se pone a `1` |
 | `PYTHONUNBUFFERED` | `1` | Salida sin buffer en Docker |
+| `PEDEE_UPLOAD_FOLDER` | `uploads/` del repo | Directorio de temporales (lo fija el escritorio) |
 
 ---
 
@@ -500,8 +531,12 @@ Ghostscript para reducir el tamaño real de las imágenes y muestra el
 porcentaje de reducción.
 
 **¿Puedo usar la app desde el móvil?**
-Sí si accedes desde la misma red, pero la app escucha en `127.0.0.1` por
-defecto. No está pensada para exponerse a internet.
+No está pensada para exponerse a internet: la app escucha en `127.0.0.1` por
+defecto y no ofrece acceso por red local.
+
+**¿La app de escritorio abre un puerto?**
+Sí, pero solo en `127.0.0.1` y con un puerto efímero elegido al arrancar. No es
+accesible desde otros equipos y se cierra al salir de la aplicación.
 
 **¿Qué pasa si un PDF está protegido?**
 Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
@@ -524,6 +559,21 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 ---
 
 ## Changelog
+
+### v1.7 (app de escritorio)
+
+- **App de escritorio para Linux** con Electron y un backend Flask empaquetado
+  con PyInstaller. La ventana abre el mismo backend en `127.0.0.1` con un puerto
+  efímero, sin navegador visible ni servicios de red nuevos.
+- **Aislamiento de temporales:** `PEDEE_UPLOAD_FOLDER` permite al paquete usar un
+  directorio propio del perfil de la aplicación; la app web y Docker conservan
+  `uploads/`.
+- **Cáscara endurecida:** sin NodeIntegration, con `contextIsolation` y
+  `sandbox`, navegación externa bloqueada y backend detenido al cerrar.
+- **Entregable:** AppImage en `desktop/dist/`. Windows y macOS quedan para una
+  versión posterior; la API local y la PWA siguen diferidas.
+- 6 tests nuevos del sidecar (203 en total), incluido el apagado del backend si
+  la ventana desaparece de forma brusca.
 
 ### v1.6 (accesibilidad y tema oscuro)
 - **Tema oscuro** automático según la preferencia del sistema
@@ -596,11 +646,13 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.4 | Seguridad avanzada: firmar, censurar, comparar | Completada |
 | v1.5 | Productividad: lotes, historial y plantillas | Completada |
 | v1.6 | Accesibilidad WCAG 2.1 AA y tema oscuro | Completada |
-| v1.7 | Plataforma: app de escritorio y API local | Planificada (diferida) |
+| v1.7 | Plataforma: app de escritorio (Linux) | Completada (API/CLI y PWA diferidas) |
+| v1.8 | Windows y macOS; API/CLI local con auth local; PWA | Planificada |
 
-El escritorio, la API/CLI local y la PWA quedan fuera de v1.6: la app continúa
-siendo local y no expone nuevos servicios de red. Línea opcional de *PDF
-Intelligence*: resumen con IA, traducción y exportación a Markdown.
+v1.7 entrega el escritorio para Linux sin exponer nuevos servicios de red: el
+backend sigue enlazando solo `127.0.0.1`. La API/CLI local y la PWA quedan
+diferidas. Línea opcional de *PDF Intelligence*: resumen con IA, traducción y
+exportación a Markdown.
 
 ---
 
@@ -646,11 +698,11 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas | 28 |
 | Rutas HTTP | 35 |
 | Plantillas Jinja2 | 31 |
-| Tests | 197 (1 omitido) |
-| Líneas de `app.py` | ~2.700 |
-| Dependencias Python | 15 (sin cambios en v1.6) |
-| Puerto por defecto | 43210 |
-| Versión actual | 1.6 |
+| Tests | 203 (1 omitido) |
+| Líneas de `app.py` | ~2.740 |
+| Dependencias Python | 15 (sin cambios en v1.7) |
+| Puerto por defecto | 43210 (web) / efímero (escritorio) |
+| Versión actual | 1.7 |
 
 ---
 

@@ -67,7 +67,12 @@ from reportlab.lib import colors
 app = Flask(__name__)
 
 # Configuración
-UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads")
+# PEDEE_UPLOAD_FOLDER permite al paquete de escritorio usar un directorio
+# escribible del usuario; el comportamiento por defecto no cambia.
+UPLOAD_FOLDER = os.environ.get(
+    "PEDEE_UPLOAD_FOLDER",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploads"),
+)
 MAX_CONTENT_LENGTH = 50 * 1024 * 1024  # 50 MB máximo por archivo
 ALLOWED_EXTENSIONS = {"pdf"}
 

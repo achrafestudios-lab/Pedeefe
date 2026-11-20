@@ -6,6 +6,13 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Escritorio (v1.7): artefactos de build, no el lockfile
+desktop/node_modules/
+desktop/build/
+desktop/dist/
+desktop/backend-dist/
+desktop/*.log
+
 # Documentación interna: solo README se publica en GitHub
 *.md
 !README.md
