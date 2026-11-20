@@ -176,6 +176,7 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.1.0`).
 
 | Sistema | Artefacto |
 |---|---|
@@ -200,7 +201,9 @@ npm run dist:linux   # o dist:win / dist:mac
 
 PyInstaller no puede cruzar plataforma: los tres instaladores se generan en
 runners nativos mediante `.github/workflows/desktop.yml` (tags `v*`). Los
-artefactos quedan en `desktop/dist/` y se publican en la pestaña Actions.
+artefactos quedan en `desktop/dist/`, se publican en la
+[pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest)
+y también permanecen temporalmente en Actions.
 
 En Linux, si el sistema no tiene FUSE (`libfuse.so.2`), usa el modo de
 extracción integrado:
