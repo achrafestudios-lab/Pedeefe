@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}HTML a PDF{% endblock %}
+
+
+{% block meta_description %}Convierte un documento HTML a PDF en local con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🌐</span> HTML a PDF</h1>
+    <p>Convierte un archivo HTML a PDF.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result-box">
+        <h2>✅ Conversión completada</h2>
+        <a href="{{ url_for('descargar_pdf_convertido', token=download_token) }}" class="btn btn-primary">
+            Descargar .pdf
+        </a>
+    </div>
+    {% else %}
+
+    <form action="{{ url_for('html_a_pdf') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu HTML aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".html,.htm" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <textarea name="html_text" rows="6" placeholder="O pega aquí tu HTML..." style="width:100%;margin:1rem 0;"></textarea>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Convertir a PDF</button>
+    </form>
+    {% endif %}
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput) {
+        const fileList = document.getElementById("fileList");
+        const submitBtn = document.getElementById("submitBtn");
+        fileInput.addEventListener("change", updateFileList);
+        function updateFileList() {
+            fileList.innerHTML = "";
+            const files = fileInput.files;
+            if (files.length === 0) { submitBtn.disabled = false; return; }
+            for (const file of files) {
+                const item = document.createElement("div");
+                item.className = "file-item";
+                item.textContent = file.name;
+                fileList.appendChild(item);
+            }
+            submitBtn.disabled = false;
+        }
+        submitBtn.disabled = false;
+    }
+</script>
+{% endblock %}

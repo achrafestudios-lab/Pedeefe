@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}PDF a PowerPoint{% endblock %}
+
+
+{% block meta_description %}Convierte un PDF a una presentación PowerPoint en local con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">📽️</span> PDF a PowerPoint</h1>
+    <p>Convierte las páginas de tu PDF en diapositivas de una presentación (.pptx).</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result-box">
+        <h2>✅ Conversión completada</h2>
+        <a href="{{ url_for('descargar_powerpoint', token=download_token) }}" class="btn btn-primary">
+            Descargar .pptx
+        </a>
+    </div>
+    {% else %}
+
+    <form action="{{ url_for('pdf_a_powerpoint') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Convertir a PowerPoint</button>
+    </form>
+    {% endif %}
+</section>
+
+<script>
+    const fileInput = document.getElementById("fileInput");
+    if (fileInput) {
+        const fileList = document.getElementById("fileList");
+        const submitBtn = document.getElementById("submitBtn");
+        fileInput.addEventListener("change", updateFileList);
+        function updateFileList() {
+            fileList.innerHTML = "";
+            const files = fileInput.files;
+            if (files.length === 0) { submitBtn.disabled = true; return; }
+            for (const file of files) {
+                const item = document.createElement("div");
+                item.className = "file-item";
+                item.textContent = file.name;
+                fileList.appendChild(item);
+            }
+            submitBtn.disabled = false;
+        }
+        submitBtn.disabled = true;
+    }
+</script>
+{% endblock %}

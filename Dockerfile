@@ -8,6 +8,13 @@ RUN apt-get update \
         ghostscript \
         tesseract-ocr \
         tesseract-ocr-spa \
+        libcairo2 \
+        libpango-1.0-0 \
+        libpangocairo-1.0-0 \
+        libgdk-pixbuf-2.0-0 \
+        libffi-dev \
+        shared-mime-info \
+        libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -22,9 +29,9 @@ COPY . .
 # Configuración de ejecución.
 ENV FLASK_HOST=0.0.0.0
 ENV FLASK_DEBUG=0
-ENV PORT=5000
+ENV PORT=43210
 ENV PYTHONUNBUFFERED=1
 
-EXPOSE 5000
+EXPOSE 43210
 
 CMD ["python", "app.py"]

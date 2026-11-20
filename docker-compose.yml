@@ -4,11 +4,11 @@ services:
     image: pedeefe:latest
     container_name: pedeefe
     ports:
-      - "5000:5000"
+      - "43210:43210"
     environment:
       FLASK_HOST: "0.0.0.0"
       FLASK_DEBUG: "0"
-      PORT: "5000"
+      PORT: "43210"
     volumes:
       # Persistencia de uploads entre reinicios del contenedor.
       - uploads:/app/uploads

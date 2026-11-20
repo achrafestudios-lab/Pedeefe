@@ -15,6 +15,33 @@ from pdf2image import convert_from_path
 from PIL import Image
 from pdf2docx import Converter
 
+# Conversiones adicionales (Fase 4)
+try:
+    import pymupdf as fitz  # PyMuPDF (el alias "fitz" está obsoleto)
+except Exception:  # pragma: no cover — versiones antiguas solo exponen "fitz"
+    try:
+        import fitz
+    except Exception:
+        fitz = None
+try:
+    import pdfplumber
+except Exception:  # pragma: no cover
+    pdfplumber = None
+try:
+    from pptx import Presentation
+    from pptx.util import Inches
+except Exception:  # pragma: no cover
+    Presentation = None
+    Inches = None
+try:
+    import openpyxl
+except Exception:  # pragma: no cover
+    openpyxl = None
+try:
+    from weasyprint import HTML as WeasyHTML
+except Exception:  # pragma: no cover
+    WeasyHTML = None
+
 # pytesseract requiere Tesseract OCR instalado en el sistema:
 #   Ubuntu/Debian: sudo apt install tesseract-ocr
 #   Fedora: sudo dnf install tesseract
@@ -153,6 +180,13 @@ REFERER_TO_TEMPLATE = {
     "/numerar": "numerar.html",
     "/recortar-pdf": "recortar_pdf.html",
     "/reordenar-pdf": "reordenar_pdf.html",
+    "/pdf-a-excel": "pdf_a_excel.html",
+    "/pdf-a-powerpoint": "pdf_a_powerpoint.html",
+    "/pdf-a-html": "pdf_a_html.html",
+    "/word-a-pdf": "word_a_pdf.html",
+    "/excel-a-pdf": "excel_a_pdf.html",
+    "/powerpoint-a-pdf": "powerpoint_a_pdf.html",
+    "/html-a-pdf": "html_a_pdf.html",
 }
 
 
@@ -1555,11 +1589,595 @@ def reordenar_pdf():
         cleanup_folder(temp_dir)
 
 
+# ─── Fase 4 · Conversión de formatos ─────────────────────────────────
+
+class ConversionError(Exception):
+    """Error de conversión con mensaje legible para la persona usuaria."""
+
+
+def _friendly_error(action, exc):
+    """Devuelve un mensaje accionable; nunca expone str(e) ni tracebacks."""
+    if isinstance(exc, ConversionError):
+        return str(exc)
+    text = str(exc).lower()
+    if "poppler" in text or "pdftoppm" in text:
+        return f"No se pudo {action}: falta Poppler. Instálalo con: sudo apt install poppler-utils."
+    if "weasyprint" in text:
+        return f"No se pudo {action}: falta WeasyPrint. Instala las dependencias del proyecto."
+    if "pdfplumber" in text:
+        return f"No se pudo {action}: falta pdfplumber. Instala las dependencias del proyecto."
+    return (
+        f"No se pudo {action}. Comprueba que el archivo no esté dañado "
+        "y que el formato sea el esperado."
+    )
+
+
+def _office_to_pdf_libreoffice(input_path, output_path):
+    """Intenta convertir con LibreOffice headless. Devuelve True si funciona."""
+    soffice = shutil.which("soffice") or shutil.which("libreoffice")
+    if not soffice:
+        return False
+    out_dir = os.path.dirname(output_path)
+    try:
+        subprocess.run(
+            [soffice, "--headless", "--convert-to", "pdf", "--outdir", out_dir, input_path],
+            check=True, capture_output=True, timeout=120,
+            env={**os.environ, "HOME": "/tmp"},
+        )
+    except Exception:
+        return False
+    # LibreOffice genera un PDF con el mismo nombre base
+    base = os.path.splitext(os.path.basename(input_path))[0]
+    produced = os.path.join(out_dir, base + ".pdf")
+    if produced != output_path and os.path.exists(produced):
+        try:
+            os.replace(produced, output_path)
+        except OSError:
+            return False
+    return os.path.exists(output_path)
+
+
+def _docx_to_html(input_path):
+    """Convierte un .docx a HTML básico usando python-docx."""
+    from docx import Document
+    from docx.table import Table
+    from docx.text.paragraph import Paragraph
+    from docx.oxml.ns import qn
+
+    doc = Document(input_path)
+    parts = ["<html><body>"]
+    for block in doc.element.body.iterchildren():
+        if block.tag == qn("w:p"):
+            p = Paragraph(block, doc)
+            style = p.style.name if p.style is not None else ""
+            text = p.text
+            if style.startswith("Heading"):
+                level = style.replace("Heading", "").strip() or "1"
+                if not level.isdigit():
+                    level = "1"
+                parts.append(f"<h{level}>{_escape_html(text)}</h{level}>")
+            else:
+                parts.append(f"<p>{_escape_html(text)}</p>")
+        elif block.tag == qn("w:tbl"):
+            table = Table(block, doc)
+            parts.append("<table border='1' cellpadding='4' cellspacing='0'>")
+            for row in table.rows:
+                parts.append("<tr>")
+                for cell in row.cells:
+                    parts.append(f"<td>{_escape_html(cell.text)}</td>")
+                parts.append("</tr>")
+            parts.append("</table>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+
+def _xlsx_to_html(input_path):
+    if openpyxl is None:
+        raise ConversionError("Falta openpyxl para leer la hoja de cálculo.")
+    wb = openpyxl.load_workbook(input_path, data_only=True)
+    parts = ["<html><body>"]
+    for ws in wb.worksheets:
+        parts.append(f"<h2>{_escape_html(ws.title)}</h2>")
+        parts.append("<table border='1' cellpadding='4' cellspacing='0'>")
+        for row in ws.iter_rows():
+            parts.append("<tr>")
+            for cell in row:
+                val = "" if cell.value is None else str(cell.value)
+                parts.append(f"<td>{_escape_html(val)}</td>")
+            parts.append("</tr>")
+        parts.append("</table>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+
+def _pptx_to_html(input_path):
+    if Presentation is None:
+        raise ConversionError("Falta python-pptx para leer la presentación.")
+    prs = Presentation(input_path)
+    parts = ["<html><body>"]
+    for i, slide in enumerate(prs.slides, 1):
+        parts.append(f"<h2>Diapositiva {i}</h2>")
+        for shape in slide.shapes:
+            if shape.has_text_frame:
+                for para in shape.text_frame.paragraphs:
+                    text = "".join(r.text for r in para.runs) or para.text
+                    if text.strip():
+                        parts.append(f"<p>{_escape_html(text)}</p>")
+            if getattr(shape, "has_table", False):
+                tbl = shape.table
+                parts.append("<table border='1' cellpadding='4' cellspacing='0'>")
+                for row in tbl.rows:
+                    parts.append("<tr>")
+                    for cell in row.cells:
+                        parts.append(f"<td>{_escape_html(cell.text)}</td>")
+                    parts.append("</tr>")
+                parts.append("</table>")
+        # notes
+        if slide.has_notes_slide:
+            notes = slide.notes_slide.notes_text_frame.text
+            if notes.strip():
+                parts.append(f"<p><em>Notas: {_escape_html(notes)}</em></p>")
+    parts.append("</body></html>")
+    return "\n".join(parts)
+
+
+def _escape_html(s):
+    import html as _html
+    return _html.escape(str(s))
+
+
+def _html_to_pdf(html_str, output_path):
+    if WeasyHTML is None:
+        raise ConversionError("Falta WeasyPrint para convertir HTML a PDF.")
+    WeasyHTML(string=html_str).write_pdf(output_path)
+
+
+def _office_to_pdf(input_path, output_path, ext):
+    """Convierte un archivo Office/HTML a PDF. Usa LibreOffice si está disponible."""
+    if _office_to_pdf_libreoffice(input_path, output_path):
+        return True
+    ext = ext.lower().lstrip(".")
+    # Los formatos antiguos (.doc/.xls/.ppt) solo los lee LibreOffice.
+    if ext in ("doc", "xls", "ppt"):
+        raise ConversionError(
+            f"El formato .{ext} necesita LibreOffice. Guarda el archivo como "
+            f".{ext}x o instala LibreOffice para convertirlo."
+        )
+    try:
+        if ext in ("docx",):
+            html = _docx_to_html(input_path)
+        elif ext in ("xlsx", "csv"):
+            html = _xlsx_to_html(input_path)
+        elif ext in ("pptx",):
+            html = _pptx_to_html(input_path)
+        elif ext in ("html", "htm"):
+            with open(input_path, "r", encoding="utf-8", errors="replace") as f:
+                html = f.read()
+        else:
+            raise ConversionError("Formato de archivo no compatible con la conversión a PDF.")
+        _html_to_pdf(html, output_path)
+        if not os.path.exists(output_path):
+            raise ConversionError("No se generó el PDF. Comprueba el archivo de entrada.")
+        return True
+    except ConversionError:
+        raise
+    except Exception as exc:
+        raise ConversionError(
+            "No se pudo convertir el archivo a PDF. Comprueba que no esté dañado "
+            "y que el formato sea el esperado."
+        ) from exc
+
+
+# ─── /pdf-a-excel ───────────────────────────────────────────────────
+@app.route("/pdf-a-excel", methods=["GET", "POST"])
+def pdf_a_excel():
+    if request.method == "GET":
+        return render_template("pdf_a_excel.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("pdf_a_excel.html", error="Selecciona un PDF para convertir.")
+    if not allowed_file(file.filename):
+        return render_template("pdf_a_excel.html", error="El archivo seleccionado no es un PDF.")
+    size_error = validate_file_size(file, "pdf_a_excel.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        if not validate_pdf(filepath):
+            raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
+        output_path = os.path.join(temp_dir, "convertido.xlsx")
+        if pdfplumber is None or openpyxl is None:
+            raise ConversionError("Faltan pdfplumber u openpyxl para extraer tablas del PDF.")
+        wb = openpyxl.Workbook()
+        sheet_count = 0
+        text_lines = []
+        with pdfplumber.open(filepath) as pdf:
+            for page_idx, page in enumerate(pdf.pages, 1):
+                for t_idx, table in enumerate(page.extract_tables() or [], 1):
+                    sheet_count += 1
+                    title = f"Pagina{page_idx}_T{t_idx}"[:31]
+                    ws = wb.create_sheet(title=title)
+                    for row in table:
+                        ws.append(["" if c is None else str(c) for c in row])
+                # texto de respaldo si la página no tiene tablas detectables
+                for line in (page.extract_text() or "").splitlines():
+                    if line.strip():
+                        text_lines.append(line.strip())
+        if sheet_count == 0:
+            ws = wb.create_sheet(title="Texto")
+            for line in text_lines:
+                ws.append([line])
+        if "Sheet" in wb.sheetnames and len(wb.sheetnames) > 1:
+            del wb["Sheet"]
+        wb.save(output_path)
+        return render_template(
+            "pdf_a_excel.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "pdf_a_excel.html",
+            error=_friendly_error("extraer los datos del PDF", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+@app.route("/descargar_excel/<token>")
+def descargar_excel(token):
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    output_path = os.path.join(temp_dir, "convertido.xlsx")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    try:
+        return send_file(output_path, as_attachment=True, download_name="convertido.xlsx")
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── /pdf-a-powerpoint ──────────────────────────────────────────────
+@app.route("/pdf-a-powerpoint", methods=["GET", "POST"])
+def pdf_a_powerpoint():
+    if request.method == "GET":
+        return render_template("pdf_a_powerpoint.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("pdf_a_powerpoint.html", error="Selecciona un PDF para convertir.")
+    if not allowed_file(file.filename):
+        return render_template("pdf_a_powerpoint.html", error="El archivo seleccionado no es un PDF.")
+    size_error = validate_file_size(file, "pdf_a_powerpoint.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        if not validate_pdf(filepath):
+            raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
+        output_path = os.path.join(temp_dir, "convertido.pptx")
+        if Presentation is None:
+            raise ConversionError("Falta python-pptx para crear la presentación.")
+        images = convert_from_path(filepath, dpi=150)
+        prs = Presentation()
+        blank_layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[-1]
+        for img in images:
+            img_path = os.path.join(temp_dir, f"_slide_{len(prs.slides)}.png")
+            img.save(img_path, "PNG")
+            slide = prs.slides.add_slide(blank_layout)
+            slide.shapes.add_picture(img_path, Inches(0), Inches(0), width=Inches(10), height=Inches(7.5))
+            os.remove(img_path)  # python-pptx ya ha incrustado la imagen
+        prs.save(output_path)
+        return render_template(
+            "pdf_a_powerpoint.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "pdf_a_powerpoint.html",
+            error=_friendly_error("convertir el PDF a PowerPoint", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+@app.route("/descargar_powerpoint/<token>")
+def descargar_powerpoint(token):
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    output_path = os.path.join(temp_dir, "convertido.pptx")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    try:
+        return send_file(output_path, as_attachment=True, download_name="convertido.pptx")
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── /pdf-a-html ─────────────────────────────────────────────────────
+@app.route("/pdf-a-html", methods=["GET", "POST"])
+def pdf_a_html():
+    if request.method == "GET":
+        return render_template("pdf_a_html.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("pdf_a_html.html", error="Selecciona un PDF para convertir.")
+    if not allowed_file(file.filename):
+        return render_template("pdf_a_html.html", error="El archivo seleccionado no es un PDF.")
+    size_error = validate_file_size(file, "pdf_a_html.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        if not validate_pdf(filepath):
+            raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
+        output_path = os.path.join(temp_dir, "convertido.html")
+        if fitz is None:
+            raise ConversionError("Falta PyMuPDF para convertir el PDF a HTML.")
+        doc = fitz.open(filepath)
+        pages_html = []
+        for i, page in enumerate(doc):
+            pages_html.append(f"<section class='page' id='page{i+1}'>")
+            pages_html.append(page.get_text("html"))
+            pages_html.append("</section>")
+        doc.close()
+        html = (
+            "<!DOCTYPE html><html><head><meta charset='utf-8'>"
+            "<title>PDF convertido</title></head><body>"
+            + "\n".join(pages_html)
+            + "</body></html>"
+        )
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(html)
+        return render_template(
+            "pdf_a_html.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "pdf_a_html.html",
+            error=_friendly_error("convertir el PDF a HTML", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+@app.route("/descargar_html/<token>")
+def descargar_html(token):
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    output_path = os.path.join(temp_dir, "convertido.html")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    try:
+        return send_file(output_path, as_attachment=True, download_name="convertido.html")
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── /word-a-pdf ─────────────────────────────────────────────────────
+@app.route("/word-a-pdf", methods=["GET", "POST"])
+def word_a_pdf():
+    if request.method == "GET":
+        return render_template("word_a_pdf.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("word_a_pdf.html", error="Selecciona un archivo para convertir.")
+    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+    if ext not in ("docx", "doc", "html", "htm"):
+        return render_template("word_a_pdf.html", error="El archivo no es un documento válido (DOCX/HTML).")
+    size_error = validate_file_size(file, "word_a_pdf.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        unique_name = f"{uuid.uuid4()}.{ext}" if ext else f"{uuid.uuid4()}.bin"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        output_path = os.path.join(temp_dir, "convertido.pdf")
+        _office_to_pdf(filepath, output_path, ext)
+        return render_template(
+            "word_a_pdf.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "word_a_pdf.html",
+            error=_friendly_error("convertir el documento a PDF", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+# ─── /excel-a-pdf ────────────────────────────────────────────────────
+@app.route("/excel-a-pdf", methods=["GET", "POST"])
+def excel_a_pdf():
+    if request.method == "GET":
+        return render_template("excel_a_pdf.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("excel_a_pdf.html", error="Selecciona un archivo para convertir.")
+    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+    if ext not in ("xlsx", "xls", "csv"):
+        return render_template("excel_a_pdf.html", error="El archivo no es una hoja de cálculo válida (XLSX/CSV).")
+    size_error = validate_file_size(file, "excel_a_pdf.html")
+    if size_error:
+        return size_error
+    # CSV -> convertir a xlsx primero
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        unique_name = f"{uuid.uuid4()}.{ext}" if ext else f"{uuid.uuid4()}.bin"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        if ext == "csv":
+            # convertir CSV a xlsx para poder renderizarlo como tabla
+            import csv as _csv
+            if openpyxl is None:
+                raise ConversionError("Falta openpyxl para leer la hoja de cálculo.")
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            with open(filepath, newline="", encoding="utf-8", errors="replace") as f:
+                for row in _csv.reader(f):
+                    ws.append(row)
+            xlsx_path = os.path.join(temp_dir, "convertido.xlsx")
+            wb.save(xlsx_path)
+            filepath = xlsx_path
+            ext = "xlsx"
+        output_path = os.path.join(temp_dir, "convertido.pdf")
+        _office_to_pdf(filepath, output_path, ext)
+        return render_template(
+            "excel_a_pdf.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "excel_a_pdf.html",
+            error=_friendly_error("convertir la hoja de cálculo a PDF", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+# ─── /powerpoint-a-pdf ───────────────────────────────────────────────
+@app.route("/powerpoint-a-pdf", methods=["GET", "POST"])
+def powerpoint_a_pdf():
+    if request.method == "GET":
+        return render_template("powerpoint_a_pdf.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("powerpoint_a_pdf.html", error="Selecciona un archivo para convertir.")
+    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+    if ext not in ("pptx", "ppt"):
+        return render_template("powerpoint_a_pdf.html", error="El archivo no es una presentación válida (PPTX).")
+    size_error = validate_file_size(file, "powerpoint_a_pdf.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        output_path = os.path.join(temp_dir, "convertido.pdf")
+        _office_to_pdf(filepath, output_path, ext)
+        return render_template(
+            "powerpoint_a_pdf.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "powerpoint_a_pdf.html",
+            error=_friendly_error("convertir la presentación a PDF", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+# ─── /html-a-pdf ─────────────────────────────────────────────────────
+@app.route("/html-a-pdf", methods=["GET", "POST"])
+def html_a_pdf():
+    if request.method == "GET":
+        return render_template("html_a_pdf.html")
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        # permitir texto HTML pegado
+        html_text = request.form.get("html_text", "").strip()
+        if not html_text:
+            return render_template("html_a_pdf.html", error="Selecciona un archivo HTML o pega el contenido.")
+        temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+        os.makedirs(temp_dir)
+        try:
+            output_path = os.path.join(temp_dir, "convertido.pdf")
+            _html_to_pdf(html_text, output_path)
+            if not os.path.exists(output_path):
+                raise ConversionError("No se generó el PDF a partir del HTML.")
+            return render_template(
+                "html_a_pdf.html",
+                success=True,
+                download_token=os.path.basename(temp_dir),
+            )
+        except Exception as e:
+            cleanup_folder(temp_dir)
+            return render_template(
+                "html_a_pdf.html",
+                error=_friendly_error("convertir el HTML a PDF", e),
+            )
+        # La carpeta se conserva hasta la descarga por token (UUID validado).
+    ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+    if ext not in ("html", "htm"):
+        return render_template("html_a_pdf.html", error="El archivo no es HTML válido.")
+    size_error = validate_file_size(file, "html_a_pdf.html")
+    if size_error:
+        return size_error
+    temp_dir = os.path.join(UPLOAD_FOLDER, str(uuid.uuid4()))
+    os.makedirs(temp_dir)
+    try:
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        output_path = os.path.join(temp_dir, "convertido.pdf")
+        with open(filepath, "r", encoding="utf-8", errors="replace") as f:
+            html = f.read()
+        _html_to_pdf(html, output_path)
+        if not os.path.exists(output_path):
+            raise ConversionError("No se generó el PDF a partir del HTML.")
+        return render_template(
+            "html_a_pdf.html",
+            success=True,
+            download_token=os.path.basename(temp_dir),
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "html_a_pdf.html",
+            error=_friendly_error("convertir el HTML a PDF", e),
+        )
+    # La carpeta se conserva hasta la descarga por token (UUID validado).
+
+
+@app.route("/descargar_pdf/<token>")
+def descargar_pdf_convertido(token):
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    output_path = os.path.join(temp_dir, "convertido.pdf")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+    try:
+        return send_file(output_path, as_attachment=True, download_name="convertido.pdf")
+    finally:
+        cleanup_folder(temp_dir)
+
+
 if __name__ == "__main__":
     # El modo debug se controla por la variable de entorno FLASK_DEBUG.
     # Por defecto False (seguro, incluido en Docker). Activar solo en
     # desarrollo local: FLASK_DEBUG=1.
     debug = os.environ.get("FLASK_DEBUG", "").lower() in ("1", "true", "yes", "on")
     host = os.environ.get("FLASK_HOST", "127.0.0.1")
-    port = int(os.environ.get("PORT", "5000"))
+    port = int(os.environ.get("PORT", "43210"))
     app.run(host=host, port=port, debug=debug)
