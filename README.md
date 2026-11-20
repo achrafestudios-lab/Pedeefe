@@ -180,10 +180,18 @@ npm ci
 npm run dist:linux
 ```
 
-El AppImage queda en `desktop/dist/`. Para probar sin empaquetar, ejecuta
-`npm start` desde `desktop/` (usa el `.venv` del repo). PyInstaller es una
-herramienta de compilación: no se añade a `requirements.txt` ni se necesita para
-la app web o Docker.
+El AppImage queda en `desktop/dist/`. Si el sistema no tiene FUSE
+(`libfuse.so.2`), el AppImage no se puede montar directamente; usa su modo de
+extracción integrado:
+
+```bash
+cd desktop
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.7.0.AppImage
+```
+
+Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
+del repo). PyInstaller es una herramienta de compilación: no se añade a
+`requirements.txt` ni se necesita para la app web o Docker.
 
 ### Requisitos mínimos
 
