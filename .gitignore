@@ -5,3 +5,7 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+
+# Documentación interna: solo README se publica en GitHub
+*.md
+!README.md
