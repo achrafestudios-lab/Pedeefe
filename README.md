@@ -172,8 +172,8 @@ Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red
 | Sistema | Artefacto |
 |---|---|
 | Linux | `Pedeefe-1.8.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-1.8.0-windows-x64.exe` (NSIS) |
-| macOS | `Pedeefe-1.8.0-macos-x64.dmg` / `Pedeefe-1.8.0-macos-arm64.dmg` (y `.zip`) |
+| Windows | `Pedeefe-1.8.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-1.8.0-mac-x64.dmg` / `Pedeefe-1.8.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
