@@ -6,6 +6,9 @@
     <meta name="color-scheme" content="light dark">
     <meta name="description" content="{% block meta_description %}Pedeefe: herramientas para manipular PDFs en local. Une, divide, optimiza, convierte, rota, protege y numera PDFs sin subir archivos a internet.{% endblock %}">
     <title>{% block title %}Pedeefe{% endblock %} - Herramientas PDF</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='icons/icon-192.png') }}">
+    <link rel="manifest" href="{{ url_for('web_manifest') }}">
+    <meta name="theme-color" content="#e31937">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>

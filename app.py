@@ -330,6 +330,26 @@ def index():
     )
 
 
+# ─── PWA: manifiesto y service worker (v1.9) ────────────────────────
+
+@app.route("/manifest.webmanifest")
+def web_manifest():
+    """Sirve el manifiesto con el MIME que exige la especificación PWA."""
+    response = app.send_static_file("manifest.json")
+    response.headers["Content-Type"] = "application/manifest+json; charset=utf-8"
+    return response
+
+
+@app.route("/sw.js")
+def service_worker():
+    """Sirve el service worker con ámbito '/' y sin caché del propio script."""
+    response = app.send_static_file("js/sw.js")
+    response.headers["Content-Type"] = "application/javascript; charset=utf-8"
+    response.headers["Service-Worker-Allowed"] = "/"
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
+
+
 # ─── Unir PDFs ──────────────────────────────────────────────────────
 
 @app.route("/unir", methods=["GET", "POST"])

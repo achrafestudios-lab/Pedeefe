@@ -253,3 +253,22 @@
         initAll();
     }
 })();
+
+// v1.9: registrar la PWA solo en contextos seguros (localhost/HTTPS) y nunca
+// dentro de Electron, donde el backend ya se entrega como aplicación nativa.
+(function () {
+    "use strict";
+
+    if (!("serviceWorker" in navigator) || !window.isSecureContext) {
+        return;
+    }
+    if (navigator.userAgent && navigator.userAgent.indexOf("Electron") !== -1) {
+        return;
+    }
+
+    window.addEventListener("load", function () {
+        navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(function () {
+            // La app sigue funcionando sin service worker; no es un error fatal.
+        });
+    });
+})();

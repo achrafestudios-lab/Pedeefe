@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-213%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-223%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -48,7 +48,8 @@
 - [Características principales](#características-principales)
 - [Capturas de pantalla](#capturas-de-pantalla)
 - [Para usuarios](#para-usuarios)
-  - [App de escritorio (v1.8)](#opción-3-app-de-escritorio-v18)
+  - [App de escritorio (v1.9)](#opción-3-app-de-escritorio-v19)
+  - [PWA instalable (v1.9)](#opción-4-pwa-instalable-v19)
 - [Instalación desde fuente](#instalación-desde-fuente)
 - [Requisitos del sistema](#requisitos-del-sistema)
 - [Formatos soportados](#formatos-soportados)
@@ -104,9 +105,12 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   foco visible, enlace «Saltar al contenido principal», mensajes anunciados a
   lectores de pantalla y contraste AA. El tema oscuro sigue la preferencia del
   sistema, sin interruptor ni datos guardados.
-- 🖥️ **App de escritorio (v1.8).** Una ventana local con el mismo backend para
+- 🖥️ **App de escritorio (v1.9).** Una ventana local con el mismo backend para
   Linux, Windows y macOS; sin navegador visible, puertos fijos ni servicios de
   red nuevos.
+- 📲 **PWA instalable (v1.9).** Instala la web como una app más en tu equipo desde
+  `127.0.0.1` o `localhost`. Guarda solo la cáscara para abrirla sin servidor;
+  las herramientas siguen necesitando el backend local.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
@@ -162,7 +166,7 @@ python3 -m venv .venv
 
 Abre <http://127.0.0.1:43210>.
 
-### Opción 3: App de escritorio (v1.8)
+### Opción 3: App de escritorio (v1.9)
 
 La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
@@ -171,9 +175,9 @@ Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-1.8.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-1.8.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-1.8.0-mac-x64.dmg` / `Pedeefe-1.8.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-1.9.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-1.9.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-1.9.0-mac-x64.dmg` / `Pedeefe-1.9.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -199,12 +203,28 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.8.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.9.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
 del repo). PyInstaller es una herramienta de compilación: no se añade a
 `requirements.txt` ni se necesita para la app web o Docker.
+
+### Opción 4: PWA instalable (v1.9)
+
+Con la app web abierta en Chrome, Edge u otro navegador compatible, usa el menú
+«Instalar aplicación» del navegador. La PWA comparte el backend con la web: no
+abre otro puerto, no crea cuentas y no envía datos a internet.
+
+- **Contexto seguro:** el registro del service worker solo ocurre en
+  `127.0.0.1`, `localhost` o HTTPS, y se omite dentro de Electron.
+- **Offline limitado:** el service worker guarda la portada, los estilos, los
+  scripts, el manifiesto y los iconos. Si el servidor local no responde, se
+  muestra una página de aviso con un botón para reintentar.
+- **Sin archivos ni contraseñas en caché:** no se interceptan subidas ni las
+  descargas por token. Las páginas de herramientas siempre se piden a la red.
+- Los iconos y el manifiesto viven en `static/`; el service worker se sirve en
+  `/sw.js` y el manifiesto en `/manifest.webmanifest`.
 
 ### Requisitos mínimos
 
@@ -340,6 +360,8 @@ Notas de uso:
 | Método | Ruta | Descripción |
 |---|---|---|
 | `GET` | `/` | Portada con el catálogo de herramientas |
+| `GET` | `/manifest.webmanifest` | Manifiesto de la PWA (MIME `application/manifest+json`) |
+| `GET` | `/sw.js` | Service worker de la PWA (ámbito `/`, sin caché) |
 | `GET`/`POST` | `/unir` | Une varios PDFs en uno |
 | `GET`/`POST` | `/dividir` | Divide o extrae un rango de páginas |
 | `GET`/`POST` | `/recortar-pdf` | Conserva solo las páginas indicadas |
@@ -429,7 +451,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 213 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 223 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -442,6 +464,7 @@ este entorno):
 | `tests/test_a11y.py` | Accesibilidad, tema oscuro y regresiones de contraste |
 | `tests/test_desktop.py` | Sidecar local, compatibilidad multiplataforma y targets del empaquetado |
 | `tests/test_dependencies.py` | Detección de motores externos y panel de la portada |
+| `tests/test_pwa.py` | Manifiesto, iconos, service worker y registro seguro |
 
 Comprobaciones adicionales:
 
@@ -490,8 +513,12 @@ templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos con tokens claros/oscuros (v1.6)
 static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
 static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.8)
-desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.8)
+static/js/sw.js         Service worker de la PWA (v1.9)
+static/manifest.json    Manifiesto de instalación (v1.9)
+static/offline.html     Página de aviso sin servidor local (v1.9)
+static/icons/           Iconos PNG de la PWA (v1.9)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.9)
+desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.9)
 .github/workflows/desktop.yml  Build multiplataforma de los instaladores
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
@@ -567,6 +594,10 @@ defecto y no ofrece acceso por red local.
 Sí, pero solo en `127.0.0.1` y con un puerto efímero elegido al arrancar. No es
 accesible desde otros equipos y se cierra al salir de la aplicación.
 
+**¿La PWA funciona sin el servidor local?**
+No. La PWA guarda solo la interfaz para abrirla y mostrar un aviso si el backend
+no está en marcha. Los PDF se procesan siempre en local con Flask.
+
 **¿Qué pasa si un PDF está protegido?**
 Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
@@ -587,10 +618,24 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | `No se pudo abrir http://localhost:43210` | Contenedor caído | Ejecuta `docker compose up --build` y revisa `docker compose logs` |
 | Conversión sin descarga | Conversión todavía en curso | Espera al enlace de descarga por token |
 | Página de error 413 | Subida mayor al límite | Selecciona un archivo más pequeño |
+| El navegador no ofrece «Instalar aplicación» | Contexto no seguro o navegador sin soporte | Abre `127.0.0.1`/`localhost` (o HTTPS) en Chrome/Edge; desde una IP de LAN la PWA no se registra |
+| La PWA muestra «no está disponible» | El servidor Flask local no está en marcha | Inicia la app web y pulsa «Reintentar» |
 
 ---
 
 ## Changelog
+
+### v1.9 (PWA instalable)
+
+- **PWA instalable** desde `127.0.0.1`/`localhost` con manifiesto, iconos PNG y
+  service worker. El registro se omite en Electron y en contextos no seguros.
+- **Offline acotado:** el service worker guarda solo la cáscara (portada, CSS,
+  JS, iconos y manifiesto) y muestra una página de aviso si falta el servidor.
+  Nunca cachea subidas, descargas por token ni páginas de herramientas.
+- **Manifiesto con MIME correcto** en `/manifest.webmanifest` y service worker
+  en `/sw.js` con `Service-Worker-Allowed: /`. Sin dependencias nuevas.
+- 10 tests nuevos (223 en total): manifiesto, iconos, service worker y registro.
+  Los instaladores de escritorio se regeneran como `1.9.0`.
 
 ### v1.8 (escritorio multiplataforma)
 
@@ -696,12 +741,13 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.5 | Productividad: lotes, historial y plantillas | Completada |
 | v1.6 | Accesibilidad WCAG 2.1 AA y tema oscuro | Completada |
 | v1.7 | Plataforma: app de escritorio (Linux) | Completada |
-| v1.8 | Windows y macOS del escritorio | Completada (API/CLI y PWA diferidas) |
+| v1.8 | Windows y macOS del escritorio | Completada |
+| v1.9 | PWA instalable | Completada (API/CLI local diferida) |
 
-v1.8 entrega instaladores para Linux, Windows y macOS sin exponer nuevos
-servicios de red: el backend sigue enlazando solo `127.0.0.1`. La API/CLI local
-y la PWA quedan diferidas. Línea opcional de *PDF Intelligence*: resumen con IA,
-traducción y exportación a Markdown.
+v1.9 añade una PWA que se instala desde `localhost` sin exponer nuevos servicios
+de red: el backend sigue enlazando solo `127.0.0.1` y el service worker no cachea
+archivos ni resultados. La API/CLI local queda diferida. Línea opcional de
+*PDF Intelligence*: resumen con IA, traducción y exportación a Markdown.
 
 ---
 
@@ -745,14 +791,15 @@ Pedeefe se construye sobre proyecto open source:
 | Métrica | Valor |
 |---|---|
 | Herramientas | 28 |
-| Rutas HTTP | 35 |
+| Rutas HTTP | 37 |
 | Plantillas Jinja2 | 31 |
-| Tests | 213 (1 omitido) |
-| Líneas de `app.py` | ~2.790 |
-| Dependencias Python | 15 (sin cambios en v1.8) |
+| Tests | 223 (1 omitido) |
+| Líneas de `app.py` | ~2.810 |
+| Dependencias Python | 15 (sin cambios en v1.9) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |
-| Versión actual | 1.8 |
+| PWA | Instalable en contextos seguros, sin caché de archivos |
+| Versión actual | 1.9 |
 
 ---
 
