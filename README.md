@@ -16,8 +16,8 @@
   <a href="https://github.com/achrafestudios-lab/Pedeefe">
     <img src="https://img.shields.io/github/stars/achrafestudios-lab/Pedeefe?style=for-the-badge" alt="Stars">
   </a>
-  <a href="https://github.com/achrafestudios-lab/Pedeefe">
-    <img src="https://img.shields.io/badge/licencia-sin%20definir-lightgrey?style=for-the-badge" alt="Licencia">
+  <a href="https://github.com/achrafestudios-lab/Pedeefe/blob/main/LICENSE">
+    <img src="https://img.shields.io/badge/licencia-MIT%20%2B%20Commons%20Clause-blue?style=for-the-badge" alt="Licencia">
   </a>
 </p>
 
@@ -596,8 +596,27 @@ Pedeefe se construye sobre proyecto open source:
 
 ## Licencia
 
-Copyright © 2026. Licencia **sin definir** en el repositorio. Si quieres
-reutilizar el proyecto, consulta antes con el autor.
+Copyright © 2026 **ach.dev**. Pedeefe se distribuye bajo la
+[licencia MIT](https://opensource.org/license/mit) con la
+[Commons Clause v1.0](https://commonsclause.com/) añadida; el texto completo
+está en [`LICENSE`](LICENSE).
+
+En resumen:
+
+| Permite | Condiciones |
+|---|---|
+| Usar la app gratis | Incluir el aviso de copyright y la licencia en las copias |
+| Modificar y adaptar el código | Conservar el texto de la licencia y el Commons Clause |
+| Compartir, distribuir e integrar | No vender el software ni un producto cuyo valor derive sustancialmente de él |
+
+El Commons Clause limita la concesión de derechos de la MIT: no autoriza
+**vender Pedeefe** ni ofrecer como pago un producto o servicio cuyo valor
+proceda sobre todo de esta app (incluye hosting, consultoría o soporte ligados a
+ella). Sí se permiten trabajos con valor añadido propio, como integraciones o
+herramientas separadas.
+
+Atribución: *Pedeefe — por ach.dev*. Si modificas el proyecto, indica los
+cambios respecto del original en el historial o en tu distribución.
 
 ---
 
