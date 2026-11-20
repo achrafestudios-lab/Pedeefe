@@ -1263,8 +1263,10 @@ def marcar_agua():
                 watermark_text, page_width, page_height
             )
             watermark_page = PdfReader(watermark_packet).pages[0]
-            page.merge_page(watermark_page)
+            # pypdf 7 exige que la página esté attachada al writer antes de
+            # superponer; add_page primero funciona también en versiones 4-6.
             writer.add_page(page)
+            writer.pages[-1].merge_page(watermark_page)
 
         # Guardar resultado
         output_path = os.path.join(temp_dir, "marcado.pdf")
@@ -1380,9 +1382,10 @@ def numerar():
             num_reader = PdfReader(num_pdf)
             num_page = num_reader.pages[0]
 
-            # Superponer el número sobre la página
-            page.merge_page(num_page)
+            # Superponer el número sobre la página attachada al writer
+            # (obligatorio en pypdf 7, compatible con versiones 4-6).
             writer.add_page(page)
+            writer.pages[-1].merge_page(num_page)
 
         # Guardar resultado
         output_path = os.path.join(temp_dir, "numerado.pdf")
