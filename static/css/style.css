@@ -277,6 +277,53 @@ body {
     color: var(--color-text-light);
 }
 
+/* ─── Dependencias del sistema (v1.8) ─────────────────────────── */
+.deps-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border-lighter);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+}
+
+.deps-panel > p {
+    color: var(--color-text-light);
+    font-size: 0.95rem;
+}
+
+.deps-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: var(--space-3);
+    list-style: none;
+    padding: 0;
+}
+
+.dep-item {
+    border-radius: var(--radius-sm);
+    font-size: 0.9rem;
+    padding: var(--space-3);
+}
+
+.dep-item strong,
+.dep-item span {
+    display: block;
+}
+
+.dep-item span {
+    color: var(--color-text-light);
+}
+
+.dep-ok {
+    background: var(--color-success-bg);
+    border: 1px solid var(--color-success-border);
+}
+
+.dep-missing {
+    background: var(--color-warning-bg);
+    border: 1px solid var(--color-warning-border);
+}
+
 /* ─── Cuadrícula de herramientas ───────────────────────────────── */
 .tools-grid {
     display: grid;

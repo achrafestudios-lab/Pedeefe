@@ -9,6 +9,19 @@
     <p>Sin subir archivos a internet. Todo se procesa en tu máquina.</p>
 </section>
 
+<section class="deps-panel" aria-labelledby="deps-title">
+    <h2 id="deps-title">Dependencias del sistema</h2>
+    <p>Algunas herramientas usan motores externos. Aquí ves cuáles están disponibles en tu equipo.</p>
+    <ul class="deps-list">
+        {% for dependency in dependencies.values() %}
+        <li class="dep-item {{ 'dep-ok' if dependency.available else 'dep-missing' }}">
+            <strong>{{ dependency.label }}</strong>
+            <span>{{ 'Disponible' if dependency.available else dependency.hint }}</span>
+        </li>
+        {% endfor %}
+    </ul>
+</section>
+
 <h2 class="visually-hidden">Herramientas</h2>
 <section class="tools-grid">
     <a href="{{ url_for('unir') }}" class="tool-card">

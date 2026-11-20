@@ -7,6 +7,7 @@ Electron. Ejecutar:
     .venv/bin/python -m unittest discover -s tests
 """
 
+import json
 import os
 import queue
 import subprocess
@@ -60,6 +61,93 @@ class TestLauncherHelpers(unittest.TestCase):
             )
             watcher.start()
             self.assertTrue(stopped.wait(timeout=2))
+
+    def test_parent_alive_posix(self):
+        with mock.patch.object(launcher.os, "name", "posix"), mock.patch.object(
+            launcher.os, "kill", side_effect=ProcessLookupError
+        ):
+            self.assertFalse(launcher.parent_alive(1234))
+        with mock.patch.object(launcher.os, "name", "posix"), mock.patch.object(
+            launcher.os, "kill", side_effect=PermissionError
+        ):
+            self.assertTrue(launcher.parent_alive(1234))
+
+    @staticmethod
+    def _kernel_mock(exit_code=launcher.STILL_ACTIVE, handle=99):
+        kernel = mock.Mock()
+        kernel.OpenProcess.return_value = handle
+        kernel.GetExitCodeProcess.side_effect = (
+            lambda _handle, pointer: setattr(pointer._obj, "value", exit_code) or 1
+        )
+        return kernel
+
+    def test_parent_alive_windows(self):
+        for exit_code, expected in ((launcher.STILL_ACTIVE, True), (0, False)):
+            with self.subTest(exit_code=exit_code):
+                kernel = self._kernel_mock(exit_code=exit_code)
+                with mock.patch.object(launcher.os, "name", "nt"), mock.patch.object(
+                    launcher.ctypes, "WinDLL", return_value=kernel, create=True
+                ), mock.patch.object(
+                    launcher.ctypes, "get_last_error", return_value=0, create=True
+                ):
+                    self.assertEqual(launcher.parent_alive(4242), expected)
+                kernel.CloseHandle.assert_called_once_with(99)
+
+    def test_parent_alive_windows_access_denied_means_alive(self):
+        kernel = self._kernel_mock(handle=0)
+        with mock.patch.object(launcher.os, "name", "nt"), mock.patch.object(
+            launcher.ctypes, "WinDLL", return_value=kernel, create=True
+        ):
+            with mock.patch.object(
+                launcher.ctypes, "get_last_error", return_value=launcher.ERROR_ACCESS_DENIED, create=True
+            ):
+                self.assertTrue(launcher.parent_alive(4242))
+            with mock.patch.object(
+                launcher.ctypes, "get_last_error", return_value=2, create=True
+            ):
+                self.assertFalse(launcher.parent_alive(4242))
+
+    def test_default_upload_dir_macos(self):
+        with mock.patch.object(launcher.os, "name", "posix"), mock.patch.object(
+            launcher.sys, "platform", "darwin"
+        ), mock.patch.dict(launcher.os.environ, {"HOME": "/tmp/fakehome"}, clear=False):
+            result = launcher.default_upload_dir()
+        self.assertIn("Library", result)
+        self.assertTrue(result.endswith(os.path.join("Pedeefe", "uploads")))
+
+    def test_default_upload_dir_windows(self):
+        with mock.patch.object(launcher.os, "name", "nt"), mock.patch.dict(
+            launcher.os.environ, {"APPDATA": "C:\\AppData"}, clear=False
+        ):
+            result = launcher.default_upload_dir()
+        self.assertIn("AppData", result)
+        self.assertTrue(result.endswith(os.path.join("Pedeefe", "uploads")))
+
+
+class TestDesktopPackaging(unittest.TestCase):
+    """Configuración electron-builder multiplataforma (v1.8). [CONFIRMADO]"""
+
+    @classmethod
+    def setUpClass(cls):
+        with (ROOT / "desktop" / "package.json").open(encoding="utf-8") as handle:
+            cls.config = json.load(handle)
+
+    def test_version_and_scripts(self):
+        self.assertEqual(self.config["version"], "1.8.0")
+        self.assertEqual(self.config["desktopName"], "Pedeefe")
+        for script in ("dist:linux", "dist:win", "dist:mac"):
+            self.assertIn(script, self.config["scripts"])
+
+    def test_targets_by_platform(self):
+        build = self.config["build"]
+        self.assertIn("AppImage", build["linux"]["target"])
+        self.assertTrue(build["linux"]["syncDesktopName"])
+        win_targets = [target["target"] for target in build["win"]["target"]]
+        self.assertIn("nsis", win_targets)
+        mac_targets = [target["target"] for target in build["mac"]["target"]]
+        self.assertIn("dmg", mac_targets)
+        self.assertIn("zip", mac_targets)
+        self.assertIsNone(build["mac"]["identity"])
 
 
 class TestDesktopSidecar(unittest.TestCase):

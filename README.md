@@ -27,8 +27,8 @@
 <p align="center">
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
-  <img src="https://img.shields.io/badge/escritorio-Linux-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-203%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
+  <img src="https://img.shields.io/badge/tests-213%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -48,7 +48,7 @@
 - [Características principales](#características-principales)
 - [Capturas de pantalla](#capturas-de-pantalla)
 - [Para usuarios](#para-usuarios)
-  - [App de escritorio (v1.7)](#opción-3-app-de-escritorio-v17)
+  - [App de escritorio (v1.8)](#opción-3-app-de-escritorio-v18)
 - [Instalación desde fuente](#instalación-desde-fuente)
 - [Requisitos del sistema](#requisitos-del-sistema)
 - [Formatos soportados](#formatos-soportados)
@@ -104,8 +104,9 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   foco visible, enlace «Saltar al contenido principal», mensajes anunciados a
   lectores de pantalla y contraste AA. El tema oscuro sigue la preferencia del
   sistema, sin interruptor ni datos guardados.
-- 🖥️ **App de escritorio (v1.7).** Una ventana local con el mismo backend; sin
-  navegador visible, puertos fijos ni servicios de red nuevos.
+- 🖥️ **App de escritorio (v1.8).** Una ventana local con el mismo backend para
+  Linux, Windows y macOS; sin navegador visible, puertos fijos ni servicios de
+  red nuevos.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
@@ -161,15 +162,24 @@ python3 -m venv .venv
 
 Abre <http://127.0.0.1:43210>.
 
-### Opción 3: App de escritorio (v1.7)
+### Opción 3: App de escritorio (v1.8)
 
 La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
-Por ahora se entrega para **Linux**; Windows y macOS vendrán en una versión
-posterior.
+Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
 
-Para construirla desde el repo necesitas Node.js 20+ y Python 3.12+:
+| Sistema | Artefacto |
+|---|---|
+| Linux | `Pedeefe-1.8.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-1.8.0-windows-x64.exe` (NSIS) |
+| macOS | `Pedeefe-1.8.0-macos-x64.dmg` / `Pedeefe-1.8.0-macos-arm64.dmg` (y `.zip`) |
+
+Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
+Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
+dependencias del sistema no se empaquetan; consulta la tabla de más abajo.
+
+Para construirla desde el repo necesitas Node.js 22+ y Python 3.12+:
 
 ```bash
 cd desktop
@@ -177,16 +187,19 @@ npm ci
 ../.venv/bin/python -m pip install pyinstaller==6.22.3
 ../.venv/bin/python -m PyInstaller --noconfirm --clean \
   --distpath backend-dist --workpath build pedeefe-backend.spec
-npm run dist:linux
+npm run dist:linux   # o dist:win / dist:mac
 ```
 
-El AppImage queda en `desktop/dist/`. Si el sistema no tiene FUSE
-(`libfuse.so.2`), el AppImage no se puede montar directamente; usa su modo de
+PyInstaller no puede cruzar plataforma: los tres instaladores se generan en
+runners nativos mediante `.github/workflows/desktop.yml` (tags `v*`). Los
+artefactos quedan en `desktop/dist/` y se publican en la pestaña Actions.
+
+En Linux, si el sistema no tiene FUSE (`libfuse.so.2`), usa el modo de
 extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.7.0.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-1.8.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -200,7 +213,7 @@ del repo). PyInstaller es una herramienta de compilación: no se añade a
 | CPU | 1 núcleo (2 recomendados para OCR y conversiones Office) |
 | RAM | 2 GB (OCR y PDF → Word pueden consumir más) |
 | Disco | ~500 MB para dependencias + espacio para los archivos temporales |
-| SO | Linux, macOS o Windows con Python; Docker en cualquier plataforma; AppImage de escritorio para Linux |
+| SO | Linux, macOS o Windows con Python; Docker en cualquier plataforma; instaladores de escritorio para Linux, Windows y macOS |
 | Navegador | Chrome, Firefox, Edge o Safari (moderno) |
 | Red | Ninguna una vez instalado |
 
@@ -234,21 +247,26 @@ También puedes arrancar con la CLI de Flask:
 
 ### Dependencias del sistema
 
-```bash
-# Ubuntu/Debian
-sudo apt install poppler-utils tesseract-ocr tesseract-ocr-spa ghostscript libreoffice
-```
+Los paquetes de escritorio no incluyen estos motores. La portada muestra un
+panel «Dependencias del sistema» con lo que está disponible y cómo instalar lo
+que falte.
+
+| Sistema | Comando o fuente |
+|---|---|
+| Ubuntu/Debian | `sudo apt install poppler-utils tesseract-ocr tesseract-ocr-spa ghostscript libreoffice` |
+| macOS (Homebrew) | `brew install poppler ghostscript tesseract tesseract-lang` y `brew install --cask libreoffice` |
+| Windows | Instala Poppler for Windows (añade su carpeta `bin` al PATH), Ghostscript, Tesseract OCR con datos en español y LibreOffice |
 
 | Dependencia | Se necesita para | ¿Obligatoria? |
 |---|---|---|
-| Poppler (`pdftoppm`) | PDF → imagen, PDF → Word | Sí |
+| Poppler (`pdftoppm`) | PDF → imagen, PDF → Word | Sí, para esas herramientas |
 | Ghostscript (`gs`) | Comprimir PDF | Solo para esa herramienta |
 | Tesseract (`spa`) | OCR de PDF | Solo para esa herramienta |
 | LibreOffice | Convertir Office → PDF | Opcional: hay alternativa en Python para DOCX/XLSX/PPTX/HTML |
 
-Si falta Tesseract, la tarjeta de OCR muestra *«Requiere Tesseract»*. Si
-faltan Ghostscript o LibreOffice, la herramienta afectada muestra un mensaje
-explicativo.
+Si falta Tesseract, la tarjeta de OCR y el panel lo avisan. Si faltan Poppler,
+Ghostscript o LibreOffice, la herramienta afectada muestra un mensaje con la
+instrucción de instalación correspondiente a tu sistema.
 
 ---
 
@@ -260,6 +278,7 @@ explicativo.
 | Python (Docker) | 3.12 |
 | Flask | 3.x |
 | Docker Engine | Cualquier versión reciente con Compose v2 |
+| Escritorio | Electron 45 + backend PyInstaller 6.22.3 (Linux, Windows y macOS) |
 | Poppler | 26.01.0 |
 
 ---
@@ -410,7 +429,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 203 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 213 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno):
 
 | Fichero | Qué cubre |
@@ -421,12 +440,13 @@ este entorno):
 | `tests/test_fase5.py` | Firma real, censura y comparación de texto |
 | `tests/test_fase6.py` | Lotes con ZIP, límites, errores y páginas de productividad |
 | `tests/test_a11y.py` | Accesibilidad, tema oscuro y regresiones de contraste |
-| `tests/test_desktop.py` | Sidecar local del escritorio y anuncio de URL |
+| `tests/test_desktop.py` | Sidecar local, compatibilidad multiplataforma y targets del empaquetado |
+| `tests/test_dependencies.py` | Detección de motores externos y panel de la portada |
 
 Comprobaciones adicionales:
 
 ```bash
-.venv/bin/python -m py_compile app.py
+.venv/bin/python -m py_compile app.py desktop/launcher.py
 .venv/bin/python -m pip check
 ```
 
@@ -470,8 +490,9 @@ templates/              Plantillas Jinja2 (interfaz en español)
 static/css/style.css    Estilos con tokens claros/oscuros (v1.6)
 static/js/main.js       Scripts compartidos (drop zone, navbar, submit)
 static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.7)
-desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.7)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v1.8)
+desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.8)
+.github/workflows/desktop.yml  Build multiplataforma de los instaladores
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
 requirements.txt        Dependencias Python
@@ -556,6 +577,9 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | Error | Causa | Solución |
 |---|---|---|
 | `Error: Requiere Tesseract` | Falta el OCR del sistema | Instala `tesseract-ocr tesseract-ocr-spa` o usa Docker |
+| Panel «Dependencias del sistema» en ámbar | Falta un motor externo | Sigue la pista del panel o usa Docker |
+| Windows muestra SmartScreen | El instalador no está firmado | Verifica el origen del artefacto; si confías en él, elige «Más información» → «Ejecutar de todos modos» |
+| macOS no abre la app | No está notarizada | Verifica el origen y permite la app en «Privacidad y seguridad» (o usa el `.zip`) |
 | «No se pudo comprimir» | Falta Ghostscript | Instala `ghostscript` o usa Docker |
 | «El formato .doc necesita LibreOffice» | Formato antiguo sin soporte Python | Instala LibreOffice o guarda como `.docx` |
 | `El archivo supera el límite de 50 MB` | Archivo demasiado grande | Reduce el tamaño o divide el PDF |
@@ -567,6 +591,23 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 ---
 
 ## Changelog
+
+### v1.8 (escritorio multiplataforma)
+
+- **Instaladores para Windows y macOS** junto al AppImage de Linux: NSIS
+  (`.exe`), DMG/ZIP para x64 y ARM, todos generados en runners nativos desde
+  `.github/workflows/desktop.yml` al publicar un tag `v*`.
+- **Monitor de PID portable**: el sidecar comprueba el proceso padre con la API
+  de Windows cuando `os.kill(pid, 0)` no está disponible, y aísla los temporales
+  en `Application Support` en macOS.
+- **Detección de dependencias**: la portada muestra el estado de Poppler,
+  Ghostscript, Tesseract y LibreOffice con instrucciones de instalación para
+  Linux, macOS y Windows. Los mensajes de error usan la misma pista.
+- **Sin firma de código**: Windows SmartScreen y macOS Gatekeeper pueden avisar
+  al abrir la app. La API/CLI local y la PWA siguen diferidas; el backend sigue
+  enlazando solo `127.0.0.1`.
+- 10 tests nuevos (213 en total): compatibilidad del sidecar, targets de
+  electron-builder y detección de dependencias.
 
 ### v1.7 (app de escritorio)
 
@@ -654,13 +695,13 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v1.4 | Seguridad avanzada: firmar, censurar, comparar | Completada |
 | v1.5 | Productividad: lotes, historial y plantillas | Completada |
 | v1.6 | Accesibilidad WCAG 2.1 AA y tema oscuro | Completada |
-| v1.7 | Plataforma: app de escritorio (Linux) | Completada (API/CLI y PWA diferidas) |
-| v1.8 | Windows y macOS; API/CLI local con auth local; PWA | Planificada |
+| v1.7 | Plataforma: app de escritorio (Linux) | Completada |
+| v1.8 | Windows y macOS del escritorio | Completada (API/CLI y PWA diferidas) |
 
-v1.7 entrega el escritorio para Linux sin exponer nuevos servicios de red: el
-backend sigue enlazando solo `127.0.0.1`. La API/CLI local y la PWA quedan
-diferidas. Línea opcional de *PDF Intelligence*: resumen con IA, traducción y
-exportación a Markdown.
+v1.8 entrega instaladores para Linux, Windows y macOS sin exponer nuevos
+servicios de red: el backend sigue enlazando solo `127.0.0.1`. La API/CLI local
+y la PWA quedan diferidas. Línea opcional de *PDF Intelligence*: resumen con IA,
+traducción y exportación a Markdown.
 
 ---
 
@@ -706,11 +747,12 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas | 28 |
 | Rutas HTTP | 35 |
 | Plantillas Jinja2 | 31 |
-| Tests | 203 (1 omitido) |
-| Líneas de `app.py` | ~2.740 |
-| Dependencias Python | 15 (sin cambios en v1.7) |
+| Tests | 213 (1 omitido) |
+| Líneas de `app.py` | ~2.790 |
+| Dependencias Python | 15 (sin cambios en v1.8) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
-| Versión actual | 1.7 |
+| Plataformas de escritorio | Linux, Windows y macOS |
+| Versión actual | 1.8 |
 
 ---
 

@@ -1,4 +1,5 @@
 import os
+import platform
 import re
 import uuid
 import shutil
@@ -102,6 +103,62 @@ cleanup_uploads_folder()
 
 # Detección de Tesseract OCR al arrancar (para la tarjeta de OCR en la portada)
 TESSERACT_AVAILABLE = shutil.which("tesseract") is not None
+
+# v1.8: los paquetes de escritorio no incluyen binarios del sistema. Detectamos
+# las cuatro dependencias externas al arrancar para avisar en la portada y dar
+# instrucciones de instalación según el sistema operativo.
+DEPENDENCY_HINTS = {
+    "Windows": {
+        "poppler": "Instala Poppler para Windows y añade su carpeta bin al PATH.",
+        "ghostscript": "Instala Ghostscript para Windows.",
+        "tesseract": "Instala Tesseract OCR para Windows con datos en español.",
+        "libreoffice": "Instala LibreOffice para convertir DOC, XLS y PPT antiguos.",
+    },
+    "Darwin": {
+        "poppler": "Instálalo con: brew install poppler",
+        "ghostscript": "Instálalo con: brew install ghostscript",
+        "tesseract": "Instálalo con: brew install tesseract tesseract-lang",
+        "libreoffice": "Instálalo con: brew install --cask libreoffice",
+    },
+    "Linux": {
+        "poppler": "Instálalo con: sudo apt install poppler-utils",
+        "ghostscript": "Instálalo con: sudo apt install ghostscript",
+        "tesseract": "Instálalo con: sudo apt install tesseract-ocr tesseract-ocr-spa",
+        "libreoffice": "Instálalo con: sudo apt install libreoffice",
+    },
+}
+DEFAULT_DEPENDENCY_HINT = "Instala la dependencia y reinicia Pedeefe."
+
+DEPENDENCY_LABELS = {
+    "poppler": "Poppler",
+    "ghostscript": "Ghostscript",
+    "tesseract": "Tesseract",
+    "libreoffice": "LibreOffice",
+}
+
+DEPENDENCY_BINARIES = {
+    "poppler": ("pdftoppm",),
+    "ghostscript": ("gs",),
+    "tesseract": ("tesseract",),
+    "libreoffice": ("soffice", "libreoffice"),
+}
+
+
+def dependency_status():
+    """Devuelve disponibilidad y pista de instalación de cada dependencia."""
+    hints = DEPENDENCY_HINTS.get(platform.system(), {})
+    return {
+        name: {
+            "label": DEPENDENCY_LABELS[name],
+            "available": any(shutil.which(binary) for binary in binaries),
+            "hint": hints.get(name, DEFAULT_DEPENDENCY_HINT),
+        }
+        for name, binaries in DEPENDENCY_BINARIES.items()
+    }
+
+
+DEPENDENCIES = dependency_status()
+
 
 def allowed_file(filename):
     """Comprueba si la extensión del archivo es permitida."""
@@ -266,7 +323,11 @@ def too_large(e):
 
 @app.route("/")
 def index():
-    return render_template("index.html", tesseract_available=TESSERACT_AVAILABLE)
+    return render_template(
+        "index.html",
+        tesseract_available=TESSERACT_AVAILABLE,
+        dependencies=DEPENDENCIES,
+    )
 
 
 # ─── Unir PDFs ──────────────────────────────────────────────────────
@@ -612,7 +673,7 @@ def comprimir_real():
         if not gs_bin:
             return render_template(
                 "comprimir_real.html",
-                error="No se encontró Ghostscript en el sistema. Instálalo con: sudo apt install ghostscript"
+                error=f"No se encontró Ghostscript en el sistema. {DEPENDENCIES['ghostscript']['hint']}"
             )
 
         output_path = os.path.join(temp_dir, "comprimido.pdf")
@@ -643,7 +704,7 @@ def comprimir_real():
         except FileNotFoundError:
             return render_template(
                 "comprimir_real.html",
-                error="No se encontró Ghostscript en el sistema. Instálalo con: sudo apt install ghostscript"
+                error=f"No se encontró Ghostscript en el sistema. {DEPENDENCIES['ghostscript']['hint']}"
             )
 
         if not os.path.exists(output_path):
@@ -751,7 +812,7 @@ def pdf_a_imagen():
         error_msg = str(e)
         # Mensaje amigable si Poppler no está instalado
         if "poppler" in error_msg.lower() or "not found" in error_msg.lower():
-            error_msg = "No se encontró Poppler en el sistema. Instálalo con: sudo apt install poppler-utils"
+            error_msg = f"No se encontró Poppler en el sistema. {DEPENDENCIES['poppler']['hint']}"
         return render_template("pdf_a_imagen.html", error=f"Error al convertir: {error_msg}",
                               format=request.form.get("format", "jpg"))
     finally:
@@ -1227,7 +1288,7 @@ def ocr():
             error_msg = "No se encontró Tesseract OCR en el sistema. Instálalo con: sudo apt install tesseract-ocr"
         # Mensaje amigable si Poppler no está instalado
         elif "poppler" in error_msg.lower():
-            error_msg = "No se encontró Poppler en el sistema. Instálalo con: sudo apt install poppler-utils"
+            error_msg = f"No se encontró Poppler en el sistema. {DEPENDENCIES['poppler']['hint']}"
         return render_template("ocr.html", error=f"Error al procesar: {error_msg}")
     finally:
         cleanup_folder(temp_dir)

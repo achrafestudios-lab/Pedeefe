@@ -15,6 +15,7 @@ directorio de subidas).
 """
 
 import argparse
+import ctypes
 import os
 import re
 import signal
@@ -25,6 +26,11 @@ import time
 
 HOST = "127.0.0.1"
 READY_PATTERN = re.compile(r"^PEDEE_READY http://127\.0\.0\.1:(\d+)$")
+
+# Constantes de la API de Windows para comprobar el PID de Electron sin os.kill.
+PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+STILL_ACTIVE = 259
+ERROR_ACCESS_DENIED = 5
 
 
 def parse_args(argv=None):
@@ -54,6 +60,8 @@ def default_upload_dir():
     """Directorio de subidas por defecto cuando Electron no lo especifica."""
     if os.name == "nt":
         base = os.environ.get("APPDATA", os.path.expanduser("~"))
+    elif sys.platform == "darwin":
+        base = os.path.join(os.path.expanduser("~"), "Library", "Application Support")
     else:
         base = os.environ.get("XDG_DATA_HOME", os.path.join(os.path.expanduser("~"), ".local", "share"))
     return os.path.join(base, "Pedeefe", "uploads")
@@ -86,15 +94,51 @@ def parse_ready(line):
     return int(match.group(1)) if match else None
 
 
+def _windows_parent_alive(pid):
+    """Comprueba el PID con kernel32; Windows no implementa ``os.kill(pid, 0)``."""
+    win_dll = getattr(ctypes, "WinDLL", None)
+    if win_dll is None:  # pragma: no cover — solo ocurre fuera de Windows
+        return True
+    try:
+        kernel32 = win_dll("kernel32", use_last_error=True)
+        kernel32.OpenProcess.argtypes = [ctypes.c_ulong, ctypes.c_int, ctypes.c_ulong]
+        kernel32.OpenProcess.restype = ctypes.c_void_p
+        kernel32.GetExitCodeProcess.argtypes = [
+            ctypes.c_void_p,
+            ctypes.POINTER(ctypes.c_ulong),
+        ]
+        kernel32.GetExitCodeProcess.restype = ctypes.c_int
+        kernel32.CloseHandle.argtypes = [ctypes.c_void_p]
+
+        handle = kernel32.OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
+        if not handle:
+            get_last_error = getattr(ctypes, "get_last_error", None)
+            last_error = get_last_error() if get_last_error else ERROR_ACCESS_DENIED
+            # Acceso denegado significa que el proceso existe; cualquier otro
+            # error (PID ya inexistente) significa que Electron ha muerto.
+            return last_error == ERROR_ACCESS_DENIED
+        try:
+            exit_code = ctypes.c_ulong()
+            if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                return True
+            return exit_code.value == STILL_ACTIVE
+        finally:
+            kernel32.CloseHandle(handle)
+    except (AttributeError, OSError, ValueError):  # pragma: no cover — defensa
+        return True
+
+
 def parent_alive(pid):
     """Comprueba que el proceso de Electron sigue vivo (si se nos indicó)."""
     if not pid:
         return True
+    if os.name == "nt":
+        return _windows_parent_alive(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
         return False
-    except PermissionError:
+    except (PermissionError, OSError):
         return True
     return True
 

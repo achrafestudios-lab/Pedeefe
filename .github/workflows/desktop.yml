@@ -1,0 +1,77 @@
+name: Desktop
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            script: dist:linux
+          - os: windows-latest
+            script: dist:win
+          - os: macos-latest
+            script: dist:mac
+    steps:
+      - name: Obtener código
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias del sistema (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils ghostscript libpango-1.0-0 libcairo2 libgdk-pixbuf-2.0-0
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependencias Python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install pyinstaller==6.22.3
+
+      - name: Configurar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+
+      - name: Instalar dependencias Node
+        working-directory: desktop
+        run: npm ci
+
+      - name: Compilar backend
+        working-directory: desktop
+        run: python -m PyInstaller --noconfirm --clean --distpath backend-dist --workpath build pedeefe-backend.spec
+
+      - name: Construir instalador
+        working-directory: desktop
+        run: npm run ${{ matrix.script }}
+
+      - name: Subir artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: pedeefe-${{ matrix.os }}
+          path: |
+            desktop/dist/*.AppImage
+            desktop/dist/*.exe
+            desktop/dist/*.dmg
+            desktop/dist/*.zip
+          if-no-files-found: error
+          retention-days: 30

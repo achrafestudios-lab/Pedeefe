@@ -1,7 +1,8 @@
 {
   "name": "pedeefe-desktop",
   "productName": "Pedeefe",
-  "version": "1.7.0",
+  "desktopName": "Pedeefe",
+  "version": "1.8.0",
   "private": true,
   "description": "Pedeefe de escritorio: caja de herramientas PDF local",
   "main": "electron/main.js",
@@ -10,7 +11,9 @@
   "scripts": {
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist:linux": "electron-builder --linux"
+    "dist:linux": "electron-builder --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac"
   },
   "build": {
     "appId": "dev.ach.pedeefe",
@@ -18,6 +21,7 @@
     "directories": {
       "output": "dist"
     },
+    "artifactName": "${productName}-${version}-${os}-${arch}.${ext}",
     "files": [
       "electron/**/*"
     ],
@@ -38,7 +42,45 @@
       "target": [
         "AppImage"
       ],
-      "category": "Office"
+      "category": "Office",
+      "syncDesktopName": true
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
+      ],
+      "identity": null,
+      "category": "public.app-category.productivity"
     }
   },
   "devDependencies": {
