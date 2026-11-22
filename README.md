@@ -85,10 +85,11 @@ rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, exportar
 a Markdown, extraer texto mediante OCR en seis idiomas y ahorrar tiempo con
 lotes, historial local y plantillas.
 
-**Todo ocurre en tu máquina.** No hay servidor público, no hay exposición de
-red, no se envían archivos a ningún servicio externo y no hay base de datos.
-El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
-`localhost:43210` si usas Docker).
+**Todo ocurre en tu máquina.** No hay servidor público, no se envían archivos a
+ningún servicio externo y no hay base de datos. El servidor Flask corre en
+`127.0.0.1:43210` por defecto. Con Docker el contenedor usa `0.0.0.0` y publica
+el puerto `43210` en el host, así que limita su acceso si el equipo está en una
+red compartida. En el escritorio se usa un puerto efímero solo en loopback.
 
 ### Características principales
 
@@ -121,15 +122,16 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   local. No abre otro puerto ni duplica la lógica de PDF.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español e inglés),
   Ghostscript y LibreOffice incluidos.
-- 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
-  archivo.
+- 🚫 **Sin cuentas ni registro.** Límites por seguridad: 50 MB por petición,
+  10 archivos y 200 páginas por lote, y 100 páginas por comparación.
 
 ---
 
 ## Capturas de pantalla
 
-Este repositorio no incluye imágenes. Puedes ver la interfaz ejecutando la app
-con Docker y abriendo `http://localhost:43210`.
+No hay capturas de pantalla versionadas: el repositorio incluye el logo, los
+iconos y el fondo en `static/`, pero no imágenes de la interfaz. Puedes verla
+ejecutando la app y abriendo `http://127.0.0.1:43210`.
 
 | Vista | Descripción |
 |---|---|
@@ -240,9 +242,11 @@ abre otro puerto, no crea cuentas y no envía datos a internet.
 ### Opción 5: API y CLI local (v2.0)
 
 Con el backend local en marcha (web, Docker o escritorio) puedes automatizar el
-procesamiento desde un script o la terminal. La API comparte el servidor de
-`127.0.0.1:43210`: **no abre un puerto nuevo** y reutiliza los mismos handlers
-que la interfaz, así que no hay dos implementaciones que puedan divergir.
+procesamiento desde un script o la terminal. La API comparte **el único
+servidor Flask** (el de `127.0.0.1:43210` en local, el puerto efímero del
+escritorio o el `43210` publicado por Docker): **no abre un puerto nuevo** y
+reutiliza los mismos handlers que la interfaz, así que no hay dos
+implementaciones que puedan divergir.
 
 El acceso exige un token local. Se crea automáticamente en `~/.pedeefe/token`
 (permisos `0600`, directorio `0700`) y se envía como `Authorization: Bearer`.
@@ -274,8 +278,10 @@ curl -H "Authorization: Bearer $TOKEN" \
   estándar de Python.
 - Los temporales siguen siendo efímeros y se borran tras la respuesta, igual que
   en la web. Ningún archivo, contraseña ni resultado se guarda en la API.
-- La API escucha solo en loopback y exige el token: no sustituye a las
-  recomendaciones de red de la sección «Seguridad y privacidad».
+- La API exige el token dondequiera que corra el backend: no sustituye a las
+  recomendaciones de red de la sección «Seguridad y privacidad». En Docker el
+  servidor publica `43210` en el host, así que no lo expongas a una red no
+  confiable.
 
 ### Requisitos mínimos
 
@@ -313,8 +319,9 @@ También puedes arrancar con la CLI de Flask:
 .venv/bin/flask --app app run
 ```
 
-> El arranque con `flask run` no activa el debug por defecto. El puerto se
-> controla con la variable `PORT` (por defecto `43210`).
+> El arranque con `flask run` no activa el debug por defecto y usa el puerto
+> `5000` de Flask. Para usar `43210` y la variable `PORT`, arranca con
+> `.venv/bin/python app.py`.
 
 ### Dependencias del sistema
 
@@ -359,7 +366,7 @@ instrucción de instalación correspondiente a tu sistema.
 | Entrada | Salida |
 |---|---|
 | PDF | PDF, JPG/PNG, DOCX, XLSX, PPTX, HTML, Markdown, TXT |
-| JPG, PNG, BMP, TIFF | PDF |
+| JPG/JPEG, PNG, GIF, BMP, TIFF, WEBP | PDF |
 | DOCX, DOC, HTML | PDF |
 | XLSX, XLS, CSV | PDF |
 | PPTX, PPT | PDF |
@@ -414,7 +421,7 @@ Notas de uso:
 |---|---|---|
 | `GET` | `/` | Portada con el catálogo de herramientas |
 | `GET` | `/manifest.webmanifest` | Manifiesto de la PWA (MIME `application/manifest+json`) |
-| `GET` | `/sw.js` | Service worker de la PWA (ámbito `/`, sin caché) |
+| `GET` | `/sw.js` | Service worker de la PWA (ámbito `/`, caché solo de la cáscara `pedeefe-v2.3.2-ui`) |
 | `GET`/`POST` | `/unir` | Une varios PDFs en uno |
 | `GET`/`POST` | `/dividir` | Divide o extrae un rango de páginas |
 | `GET`/`POST` | `/recortar-pdf` | Conserva solo las páginas indicadas |
@@ -501,8 +508,9 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
   identificadores de usuario, y nunca incluyen contraseñas.
 - La API local (v2.0) exige un token `Bearer` guardado en `~/.pedeefe/token` con
   permisos `0600` (o pasado con `PEDEEFE_TOKEN`). No hay auth web, CSRF ni
-  rate limiting, así que la app sigue escuchando solo en `127.0.0.1`: no la
-  expongas a una red no confiable ni publiques el token.
+  rate limiting. La app escucha en `127.0.0.1` por defecto, pero Docker publica
+  el puerto `43210` en el host: no lo expongas a una red no confiable ni
+  publiques el token.
 
 ---
 
@@ -597,9 +605,12 @@ static/js/productivity.js  Historial y plantillas en localStorage (v1.5)
 static/js/sw.js         Service worker de la PWA (v1.9)
 static/manifest.json    Manifiesto de instalación (v1.9)
 static/offline.html     Página de aviso sin servidor local (v1.9)
-static/icons/           Iconos PNG de la PWA (v1.9)
+static/brand/           Logo, favicon y variantes SVG de la marca
+static/img/             Fondo local de la interfaz
+static/icons/           Iconos PNG de la PWA y SVG de las herramientas
 tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v2.3)
 desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.8)
+desktop/assets/         Iconos del ejecutable: PNG, ICO e ICNS con el logo
 .github/workflows/desktop.yml  Build multiplataforma de los instaladores
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
@@ -657,8 +668,8 @@ No. Todo se procesa en local y los archivos temporales se eliminan. La app no
 tiene telemetría ni servicios externos.
 
 **¿Necesito cuenta o pago?**
-No. No hay registro, límites de uso ni marcas de agua. El único límite es de
-50 MB por archivo.
+No. No hay registro ni marcas de agua. Los límites son 50 MB por petición,
+10 archivos y 200 páginas por lote, y 100 páginas al comparar documentos.
 
 **¿Por qué la tarjeta de OCR dice «Requiere Tesseract»?**
 Porque el binario de Tesseract no está instalado. Instálalo con
@@ -672,7 +683,9 @@ porcentaje de reducción.
 
 **¿Puedo usar la app desde el móvil?**
 No está pensada para exponerse a internet: la app escucha en `127.0.0.1` por
-defecto y no ofrece acceso por red local.
+defecto. Si usas Docker, el puerto se publica en el host y puede alcanzarse
+desde la red local; limita el acceso con un firewall o cambia el mapeo del
+puerto en `docker-compose.yml` a `127.0.0.1:43210:43210`.
 
 **¿La app de escritorio abre un puerto?**
 Sí, pero solo en `127.0.0.1` y con un puerto efímero elegido al arrancar. No es
@@ -685,7 +698,8 @@ no está en marcha. Los PDF se procesan siempre en local con Flask.
 **¿Puedo automatizar Pedeefe desde un script?**
 Sí. Con el backend en marcha, usa `python cli/pedeefe.py list` para ver las 27
 herramientas disponibles y la API `POST /api/v1/tools/<slug>` desde cualquier
-lenguaje. Todo sigue en `127.0.0.1` y con el mismo token local.
+lenguaje. Todo pasa por el mismo servidor local y el mismo token; con Docker,
+por el puerto `43210` publicado en el host.
 
 **¿Dónde se guarda el token de la API?**
 En `~/.pedeefe/token`, con permisos restringidos. Si prefieres no crear ese
@@ -701,12 +715,12 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 | Error | Causa | Solución |
 |---|---|---|
-| `Error: Requiere Tesseract` | Falta el OCR del sistema | Instala `tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng` o usa Docker |
+| «Requiere Tesseract» | Falta el OCR del sistema | Instala `tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng` o usa Docker |
 | `Falta el idioma '...' en Tesseract` | No está el paquete de datos del idioma elegido | Instala `tesseract-ocr-<codigo>` (por ejemplo `tesseract-ocr-fra`) |
 | Panel «Dependencias del sistema» en ámbar | Falta un motor externo | Sigue la pista del panel o usa Docker |
 | Windows muestra SmartScreen | El instalador no está firmado | Verifica el origen del artefacto; si confías en él, elige «Más información» → «Ejecutar de todos modos» |
 | macOS no abre la app | No está notarizada | Verifica el origen y permite la app en «Privacidad y seguridad» (o usa el `.zip`) |
-| «No se pudo comprimir» | Falta Ghostscript | Instala `ghostscript` o usa Docker |
+| «No se encontró Ghostscript en el sistema» | Falta Ghostscript | Instala `ghostscript` o usa Docker |
 | «El formato .doc necesita LibreOffice» | Formato antiguo sin soporte Python | Instala LibreOffice o guarda como `.docx` |
 | `El archivo supera el límite de 50 MB` | Archivo demasiado grande | Reduce el tamaño o divide el PDF |
 | `Puerto 43210 ocupado` | Otra app usa el puerto | Cambia `PORT` en el entorno |
@@ -985,7 +999,7 @@ Pedeefe se construye sobre proyecto open source:
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
-| API/CLI | Local, solo loopback, con token `0600` |
+| API/CLI | En el servidor local (loopback por defecto; `43210` publicado en Docker), con token `0600` |
 | Versión actual | 2.3.1 |
 
 ---
@@ -997,7 +1011,7 @@ Pedeefe se construye sobre proyecto open source:
 3. Haz tus cambios respetando las convenciones del proyecto.
 4. Ejecuta los tests: `.venv/bin/python -m unittest discover -s tests`.
 5. Comprueba la sintaxis:
-   `.venv/bin/python -m py_compile app.py local_token.py cli/pedeefe.py`.
+   `.venv/bin/python -m py_compile app.py local_token.py cli/pedeefe.py desktop/launcher.py`.
 6. Commitea y haz push.
 7. Abre un Pull Request.
 
