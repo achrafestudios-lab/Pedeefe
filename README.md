@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-248%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-318%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -48,7 +48,7 @@
 - [Características principales](#características-principales)
 - [Capturas de pantalla](#capturas-de-pantalla)
 - [Para usuarios](#para-usuarios)
-  - [App de escritorio (v1.9)](#opción-3-app-de-escritorio-v19)
+  - [App de escritorio (v1.8)](#opción-3-app-de-escritorio-v18)
   - [PWA instalable (v1.9)](#opción-4-pwa-instalable-v19)
   - [API y CLI local (v2.0)](#opción-5-api-y-cli-local-v20)
 - [Instalación desde fuente](#instalación-desde-fuente)
@@ -81,8 +81,9 @@
 
 Pedeefe es una aplicación web que reúne **29 herramientas para trabajar con
 PDFs**: unir, dividir, recortar, reordenar, optimizar, comprimir, convertir,
-rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, extraer
-texto mediante OCR y ahorrar tiempo con lotes, historial local y plantillas.
+rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, exportar
+a Markdown, extraer texto mediante OCR en seis idiomas y ahorrar tiempo con
+lotes, historial local y plantillas.
 
 **Todo ocurre en tu máquina.** No hay servidor público, no hay exposición de
 red, no se envían archivos a ningún servicio externo y no hay base de datos.
@@ -99,14 +100,17 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
   estructura del PDF; *Comprimir* usa Ghostscript para reducir el tamaño real
   de las imágenes y muestra el porcentaje conseguido.
 - 🔄 **Conversiones en ambos sentidos.** PDF ↔ Word, Excel, PowerPoint, HTML e
-  imágenes, además de imágenes → PDF.
+  imágenes, PDF → Markdown, además de imágenes → PDF.
+- 🔍 **OCR en seis idiomas.** Extrae texto de escaneos en español, inglés,
+  francés, alemán, italiano y portugués; elige el idioma por documento y el
+  servidor valida el código antes de pasarlo a Tesseract.
 - ✍️ **Firma, censura y comparación.** Firma criptográfica con certificado
   PKCS#12, borrado real de texto y diferencias página a página.
 - ♿ **Accesible y con tema oscuro.** Navegación por grupos, manejo por teclado,
   foco visible, enlace «Saltar al contenido principal», mensajes anunciados a
   lectores de pantalla y contraste AA. El tema oscuro sigue la preferencia del
   sistema, sin interruptor ni datos guardados.
-- 🖥️ **App de escritorio (v1.9).** Una ventana local con el mismo backend para
+- 🖥️ **App de escritorio (v1.8).** Una ventana local con el mismo backend para
   Linux, Windows y macOS; sin navegador visible, puertos fijos ni servicios de
   red nuevos.
 - 📲 **PWA instalable (v1.9).** Instala la web como una app más en tu equipo desde
@@ -115,7 +119,7 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 - 🤖 **API y CLI local (v2.0).** Automatiza 27 herramientas de procesamiento desde
   scripts o la terminal, sobre el mismo backend de `127.0.0.1` y con un token
   local. No abre otro puerto ni duplica la lógica de PDF.
-- 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
+- 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español e inglés),
   Ghostscript y LibreOffice incluidos.
 - 🚫 **Sin cuentas ni registro.** Sin límites de uso más allá de 50 MB por
   archivo.
@@ -140,7 +144,7 @@ con Docker y abriendo `http://localhost:43210`.
 | Organizar | Unir varios PDFs, dividir por páginas o rangos, conservar páginas concretas y cambiar su orden |
 | Optimizar e OCR | Optimizar la estructura, comprimir con Ghostscript y extraer texto de escaneos en seis idiomas |
 | Convertir a PDF | Imágenes, Word, Excel, PowerPoint y HTML → PDF |
-| Convertir desde PDF | PDF → imagen, Word, Excel, PowerPoint y HTML |
+| Convertir desde PDF | PDF → imagen, Word, Excel, PowerPoint, HTML y Markdown |
 | Editar | Rotar, numerar páginas y añadir marca de agua |
 | Seguridad | Proteger con contraseña y desproteger |
 | Productividad | Lotes con ZIP, historial local y plantillas reutilizables |
@@ -170,7 +174,7 @@ python3 -m venv .venv
 
 Abre <http://127.0.0.1:43210>.
 
-### Opción 3: App de escritorio (v1.9)
+### Opción 3: App de escritorio (v1.8)
 
 La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
@@ -259,7 +263,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:43210/api/v1/tools/unir -o unido.pdf
 ```
 
-- `GET /api/v1/tools` devuelve las **26 herramientas de procesamiento**, con sus
+- `GET /api/v1/tools` devuelve las **27 herramientas de procesamiento**, con sus
   campos de archivo y parámetros. «Historial» y «Plantillas» no aparecen: viven
   solo en el navegador.
 - `POST /api/v1/tools/<slug>` devuelve el archivo resultante (`Content-Disposition`
@@ -354,7 +358,7 @@ instrucción de instalación correspondiente a tu sistema.
 
 | Entrada | Salida |
 |---|---|
-| PDF | PDF, JPG/PNG, DOCX, XLSX, PPTX, HTML, TXT |
+| PDF | PDF, JPG/PNG, DOCX, XLSX, PPTX, HTML, Markdown, TXT |
 | JPG, PNG, BMP, TIFF | PDF |
 | DOCX, DOC, HTML | PDF |
 | XLSX, XLS, CSV | PDF |
@@ -370,9 +374,9 @@ se valida tanto la extensión como el contenido real del archivo.
 | Categoría | Herramientas | Ruta |
 |---|---|---|
 | **Organizar** | Unir, Dividir, Recortar, Reordenar | `/unir`, `/dividir`, `/recortar-pdf`, `/reordenar-pdf` |
-| **Optimizar e OCR** | Optimizar, Comprimir, OCR | `/comprimir`, `/comprimir-real`, `/ocr` |
+| **Optimizar e OCR** | Optimizar, Comprimir, OCR (6 idiomas) | `/comprimir`, `/comprimir-real`, `/ocr` |
 | **Convertir a PDF** | Imágenes, Word, Excel, PowerPoint, HTML | `/imagen-a-pdf`, `/word-a-pdf`, `/excel-a-pdf`, `/powerpoint-a-pdf`, `/html-a-pdf` |
-| **Convertir desde PDF** | Imagen, Word, Excel, PowerPoint, HTML | `/pdf-a-imagen`, `/pdf-a-word`, `/pdf-a-excel`, `/pdf-a-powerpoint`, `/pdf-a-html` |
+| **Convertir desde PDF** | Imagen, Word, Excel, PowerPoint, HTML, Markdown | `/pdf-a-imagen`, `/pdf-a-word`, `/pdf-a-excel`, `/pdf-a-powerpoint`, `/pdf-a-html`, `/pdf-a-markdown` |
 | **Editar** | Rotar, Numerar, Marca de agua | `/rotar`, `/numerar`, `/marcar-agua` |
 | **Seguridad** | Proteger, Desproteger | `/proteger`, `/desproteger` |
 | **Avanzadas** | Firmar, Censurar, Comparar | `/firmar`, `/censurar`, `/comparar` |
@@ -527,7 +531,7 @@ ejecutan y comprueban el texto extraído):
 | `tests/test_cli.py` | Catálogo, reparto de archivos, parámetros, salida y errores del CLI |
 | `tests/test_hardening.py` | Temporales `0700`, limpieza con PDFs corruptos y descarga diferida |
 | `tests/test_markdown.py` | PDF → Markdown: texto extraído, errores y limpieza del temporal |
-| `tests/test_coverage.py` | Ramas con valor: helpers, errores legibles, opciones, conversiones y token local |
+| `tests/test_coverage.py` | Ramas con valor: helpers, errores legibles, opciones, conversiones, idiomas de OCR y token local |
 
 La cobertura de `app.py` y `local_token.py` se mide con `coverage` instalado solo
 en el entorno virtual (no es dependencia de la aplicación):
@@ -569,7 +573,7 @@ docker compose up --build
 ```
 
 La imagen `pedeefe:latest` incluye Python 3.12, Poppler, Ghostscript,
-Tesseract con español y LibreOffice. El contenedor publica el puerto `43210`
+Tesseract con español e inglés y LibreOffice. El contenedor publica el puerto `43210`
 y se reinicia automáticamente.
 
 Paradetener y eliminar el contenedor:
@@ -594,8 +598,8 @@ static/js/sw.js         Service worker de la PWA (v1.9)
 static/manifest.json    Manifiesto de instalación (v1.9)
 static/offline.html     Página de aviso sin servidor local (v1.9)
 static/icons/           Iconos PNG de la PWA (v1.9)
-tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v2.0)
-desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v2.0)
+tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v2.3)
+desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.8)
 .github/workflows/desktop.yml  Build multiplataforma de los instaladores
 Dockerfile              Imagen con dependencias del sistema
 docker-compose.yml      Arranque en el puerto 43210
@@ -734,7 +738,8 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 - **PDF a Markdown:** nueva herramienta en «Convertir desde PDF» que extrae el
   texto de cada página con `pypdf` y descarga un `convertido.md` editable, sin
   dependencias nuevas ni servicios externos. También disponible en la API local
-  como `pdf-a-markdown`. 6 tests nuevos (258 en total).
+  como `pdf-a-markdown`: el catálogo pasa de 26 a 27 herramientas. 6 tests nuevos
+  (258 en total).
 - **Cobertura:** 54 tests nuevos en `tests/test_coverage.py` (312 en total) para
   las ramas con valor funcional; `app.py` pasa del 83 % al 90 % y `local_token.py`
   al 100 % (total 91 %). Sin cambios en dependencias ni en el comportamiento.
@@ -906,11 +911,14 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v2.0 | API y CLI local | Completada |
 | v2.0.1 | Consolidación y hardening | Completada |
 | v2.1.0 | Rediseño visual con marca Pedeefe | Completada |
+| v2.2.0 | PDF a Markdown y cobertura 91 % | Completada |
+| v2.3.0 | OCR multiidioma (6 idiomas) | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
 opcional de *PDF Intelligence*: resumen con IA y traducción. La exportación a
-Markdown ya está disponible con `pypdf`, sin dependencias nuevas.
+Markdown ya está disponible con `pypdf` y el OCR reconoce seis idiomas con los
+paquetes del sistema Tesseract; ninguna de las dos añade dependencias Python.
 
 ---
 
