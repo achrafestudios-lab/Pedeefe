@@ -1,7 +1,7 @@
 # Pedeefe — Caja de herramientas PDF local
 
 <p align="center">
-  <span style="font-size:88px">📄</span>
+  <img src="static/brand/pedeefe-icono-app.svg" alt="Pedeefe" width="120">
 </p>
 
 <p align="center">
