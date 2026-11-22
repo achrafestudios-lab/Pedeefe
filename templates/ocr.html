@@ -17,9 +17,22 @@
     <div class="alert alert-warning">
         Esta herramienta necesita <strong>Tesseract OCR</strong> y <strong>Poppler</strong> instalados en el sistema.
         <br>Instálalos con: <code>sudo apt install tesseract-ocr poppler-utils</code>
+        <br>Para cada idioma hace falta su paquete, por ejemplo <code>tesseract-ocr-eng</code>.
     </div>
 
     <form action="{{ url_for('ocr') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        {# Mantener en sync con OCR_LANGUAGES en app.py #}
+        <div class="form-field">
+            <label for="ocr-lang">Idioma del documento</label>
+            <select name="lang" id="ocr-lang">
+                {% for value, label in [
+                    ('spa', 'Español'), ('eng', 'English'), ('fra', 'Français'),
+                    ('deu', 'Deutsch'), ('ita', 'Italiano'), ('por', 'Português')
+                ] %}
+                <option value="{{ value }}" {% if request.form.get('lang', 'spa') == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
         <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
             <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
             <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">

@@ -808,6 +808,14 @@ class TestOcrTools(TempUploadMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"PEDEEFE", resp.data.upper())
 
+    @unittest.skipUnless(shutil.which("tesseract"), "Tesseract ausente en este entorno")
+    def test_post_ocr_in_english(self):
+        pdf = make_pdf_bytes("PEDEEFE OCR")
+        data = {"file": (io.BytesIO(pdf), "a.pdf"), "lang": "eng"}
+        resp = self.client.post("/ocr", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn(b"PEDEEFE", resp.data.upper())
+
 
 class TestRepoUploadsEmptyTools(unittest.TestCase):
     def test_repo_uploads_empty(self):

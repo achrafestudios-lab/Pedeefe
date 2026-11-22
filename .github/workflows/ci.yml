@@ -17,7 +17,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y poppler-utils ghostscript libpango-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 \
-            tesseract-ocr tesseract-ocr-spa libreoffice
+            tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng libreoffice
 
       - name: Verificar motores externos
         run: |

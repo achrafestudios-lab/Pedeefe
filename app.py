@@ -132,7 +132,10 @@ DEPENDENCY_HINTS = {
     "Linux": {
         "poppler": "Instálalo con: sudo apt install poppler-utils",
         "ghostscript": "Instálalo con: sudo apt install ghostscript",
-        "tesseract": "Instálalo con: sudo apt install tesseract-ocr tesseract-ocr-spa",
+        "tesseract": (
+            "Instálalo con: sudo apt install tesseract-ocr "
+            "tesseract-ocr-spa tesseract-ocr-eng"
+        ),
         "libreoffice": "Instálalo con: sudo apt install libreoffice",
     },
 }
@@ -1259,10 +1262,28 @@ def desproteger():
 
 # ─── OCR de PDFs escaneados ──────────────────────────────────────────
 
+# Códigos aceptados por el selector. Se pasan tal cual a Tesseract, por lo que
+# la lista es también un allowlist: nunca se envía un idioma arbitrario al motor.
+# Cada idioma requiere su traineddata instalado en el sistema.
+OCR_LANGUAGES = {
+    "spa": "Español",
+    "eng": "English",
+    "fra": "Français",
+    "deu": "Deutsch",
+    "ita": "Italiano",
+    "por": "Português",
+}
+
+
 @app.route("/ocr", methods=["GET", "POST"])
 def ocr():
     if request.method == "GET":
         return render_template("ocr.html")
+
+    # Idioma: allowlist estricto para no pasar códigos arbitrarios a Tesseract.
+    lang = request.form.get("lang") or "spa"
+    if lang not in OCR_LANGUAGES:
+        return render_template("ocr.html", error="Selecciona un idioma de OCR válido.")
 
     # Recibir archivo
     file = request.files.get("file")
@@ -1297,7 +1318,7 @@ def ocr():
         # Extraer texto de cada página con pytesseract (necesita Tesseract OCR)
         all_text = []
         for i, image in enumerate(images):
-            text = pytesseract.image_to_string(image, lang="spa")
+            text = pytesseract.image_to_string(image, lang=lang)
             all_text.append(f"--- Página {i + 1} ---\n{text}")
 
         # Unir todo el texto en un solo string
@@ -1313,8 +1334,14 @@ def ocr():
     except Exception as e:
         cleanup_folder(temp_dir)
         error_msg = str(e)
+        # Mensaje amigable si falta el traineddata del idioma elegido
+        if "traineddata" in error_msg.lower():
+            error_msg = (
+                f"Falta el idioma '{lang}' en Tesseract. Instálalo con: "
+                f"sudo apt install tesseract-ocr-{lang}"
+            )
         # Mensaje amigable si Tesseract no está instalado
-        if "tesseract" in error_msg.lower() or "not found" in error_msg.lower():
+        elif "tesseract" in error_msg.lower() or "not found" in error_msg.lower():
             error_msg = "No se encontró Tesseract OCR en el sistema. Instálalo con: sudo apt install tesseract-ocr"
         # Mensaje amigable si Poppler no está instalado
         elif "poppler" in error_msg.lower():
@@ -2982,7 +3009,7 @@ API_TOOLS = {
     },
     "ocr": {
         "label": "OCR", "endpoint": "ocr", "route": "/ocr",
-        "files": [_api_file("file")], "params": [],
+        "files": [_api_file("file")], "params": ["lang"],
     },
     "marcar-agua": {
         "label": "Marcar con agua", "endpoint": "marcar_agua",

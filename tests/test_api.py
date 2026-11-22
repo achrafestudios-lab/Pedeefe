@@ -101,6 +101,11 @@ class TestApiCatalog(_ApiTestCase):
         self.assertFalse(tools["comparar"]["files"][0]["multiple"])
         self.assertIn("certificate", [f["name"] for f in tools["firmar"]["files"]])
 
+    def test_catalog_describes_ocr_language_param(self):
+        payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
+        tools = {tool["slug"]: tool for tool in payload["tools"]}
+        self.assertIn("lang", tools["ocr"]["params"])
+
 
 class TestApiExecution(_ApiTestCase):
     """Los handlers web se ejecutan y su salida se normaliza. [CONFIRMADO]"""

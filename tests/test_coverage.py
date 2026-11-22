@@ -443,6 +443,57 @@ class TestOcrBranches(TempUploadMixin, unittest.TestCase):
         self.assertIn("Texto reconocido", resp.data.decode("utf-8", "replace"))
         self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 
+    def test_default_language_is_spanish(self):
+        from PIL import Image
+
+        image = Image.new("RGB", (10, 10), color="white")
+        with patch.object(app_module, "convert_from_path", return_value=[image]), \
+                patch.object(app_module.pytesseract, "image_to_string",
+                             return_value="Texto") as recognize:
+            self._post()
+        recognize.assert_called_once_with(image, lang="spa")
+
+    def test_selected_language_is_forwarded(self):
+        from PIL import Image
+
+        image = Image.new("RGB", (10, 10), color="white")
+        with patch.object(app_module, "convert_from_path", return_value=[image]), \
+                patch.object(app_module.pytesseract, "image_to_string",
+                             return_value="Text") as recognize:
+            resp = self.client.post(
+                "/ocr",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "lang": "eng"},
+                content_type="multipart/form-data",
+            )
+        self.assertEqual(resp.status_code, 200)
+        recognize.assert_called_once_with(image, lang="eng")
+
+    def test_invalid_language_is_rejected(self):
+        with patch.object(app_module.pytesseract, "image_to_string") as recognize:
+            resp = self.client.post(
+                "/ocr",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "lang": "xx"},
+                content_type="multipart/form-data",
+            )
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn("idioma de OCR", body)
+        recognize.assert_not_called()
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_missing_language_pack_has_clear_message(self):
+        with patch.object(app_module, "convert_from_path",
+                          side_effect=RuntimeError("Error opening data file fra.traineddata")):
+            resp = self.client.post(
+                "/ocr",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "lang": "fra"},
+                content_type="multipart/form-data",
+            )
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn("tesseract-ocr-fra", body)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
     def test_poppler_error_is_explained(self):
         with patch.object(app_module, "convert_from_path",
                           side_effect=Exception("poppler no encontrado")):
