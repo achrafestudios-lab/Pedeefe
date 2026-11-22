@@ -80,12 +80,12 @@ class TestApiCatalog(_ApiTestCase):
         payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["version"], "2.3.1")
-        self.assertEqual(payload["count"], 27)
+        self.assertEqual(payload["count"], 29)
         slugs = [tool["slug"] for tool in payload["tools"]]
         self.assertEqual(len(slugs), len(set(slugs)))
         for expected in (
-            "unir", "dividir", "comprimir", "ocr", "firmar", "comparar", "lotes",
-            "pdf-a-markdown",
+            "unir", "dividir", "comprimir", "ocr", "ocr-a-pdf",
+            "limpiar-metadatos", "firmar", "comparar", "lotes", "pdf-a-markdown",
         ):
             self.assertIn(expected, slugs)
         for tool in payload["tools"]:
@@ -105,6 +105,15 @@ class TestApiCatalog(_ApiTestCase):
         payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
         tools = {tool["slug"]: tool for tool in payload["tools"]}
         self.assertIn("lang", tools["ocr"]["params"])
+        self.assertIn("lang", tools["ocr-a-pdf"]["params"])
+
+    def test_catalog_describes_metadata_options(self):
+        payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
+        tools = {tool["slug"]: tool for tool in payload["tools"]}
+        params = tools["limpiar-metadatos"]["params"]
+        self.assertIn("clear_info", params)
+        self.assertIn("clear_xmp", params)
+        self.assertIn("title", params)
 
 
 class TestApiExecution(_ApiTestCase):
@@ -149,6 +158,42 @@ class TestApiExecution(_ApiTestCase):
         })
         self.assertEqual(response.status_code, 200)
         self.assertIn("comprimido.pdf", response.headers["Content-Disposition"])
+        self.assertEqual(response.data[:5], b"%PDF-")
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_limpiar_metadatos_devuelve_pdf(self):
+        response = self._post("limpiar-metadatos", {
+            "file": (io.BytesIO(sample_pdf()), "a.pdf"),
+            "clear_info": "on",
+            "clear_xmp": "on",
+            "clear_attachments": "on",
+            "clear_js": "on",
+            "clear_page_meta": "on",
+        })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("sin_metadatos.pdf", response.headers["Content-Disposition"])
+        self.assertEqual(response.data[:5], b"%PDF-")
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_ocr_a_pdf_devuelve_pdf(self):
+        try:
+            from test_tools import make_tesseract_layer_bytes
+        except ImportError:  # ejecución como paquete
+            from tests.test_tools import make_tesseract_layer_bytes
+        from PIL import Image
+
+        with patch.object(
+            app_module, "convert_from_path", return_value=[Image.new("RGB", (20, 20))]
+        ), patch.object(
+            app_module.pytesseract, "image_to_pdf_or_hocr",
+            side_effect=lambda image, lang=None, extension=None:
+                make_tesseract_layer_bytes(),
+        ):
+            response = self._post("ocr-a-pdf", {
+                "file": (io.BytesIO(sample_pdf()), "a.pdf"), "lang": "spa",
+            })
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("buscable.pdf", response.headers["Content-Disposition"])
         self.assertEqual(response.data[:5], b"%PDF-")
         self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 

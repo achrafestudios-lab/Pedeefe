@@ -4,7 +4,7 @@
 // necesitando el backend Flask en 127.0.0.1.
 "use strict";
 
-const CACHE_NAME = "pedeefe-v2.3.2-ui";
+const CACHE_NAME = "pedeefe-v2.3.3-ui";
 const OFFLINE_URL = "/static/offline.html";
 const APP_SHELL = [
     "/",
@@ -32,8 +32,10 @@ const APP_SHELL = [
     "/static/icons/tools/historial.svg",
     "/static/icons/tools/html_a_pdf.svg",
     "/static/icons/tools/imagen_a_pdf.svg",
+    "/static/icons/tools/limpiar_metadatos.svg",
     "/static/icons/tools/lotes.svg",
     "/static/icons/tools/marcar_agua.svg",
+    "/static/icons/tools/ocr_a_pdf.svg",
     "/static/icons/tools/numerar.svg",
     "/static/icons/tools/ocr.svg",
     "/static/icons/tools/pdf_a_excel.svg",

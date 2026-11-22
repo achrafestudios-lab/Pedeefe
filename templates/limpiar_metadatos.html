@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Limpiar metadatos{% endblock %}
+
+
+{% block meta_description %}Inspecciona y elimina metadatos, adjuntos y scripts ocultos de un PDF antes de compartirlo. Todo en local con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🧼</span> Limpiar metadatos</h1>
+    <p>Elimina datos ocultos antes de compartir un PDF: autor, programa que lo generó, fechas, metadatos XMP, adjuntos incrustados y scripts.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    {% if success %}
+    <div class="result-box">
+        <h2><span aria-hidden="true">✅</span> PDF limpiado</h2>
+        {% if detected %}
+        <p>Datos encontrados en el original: {{ detected|join(', ') }}.</p>
+        {% endif %}
+        {% if removed %}
+        <ul>
+            {% for item in removed %}<li>Eliminado: {{ item }}</li>{% endfor %}
+        </ul>
+        {% else %}
+        <p>No se encontraron datos que coincidieran con las opciones seleccionadas.</p>
+        {% endif %}
+        <a href="{{ url_for('descargar_limpiar_metadatos', token=download_token) }}" class="btn btn-primary">Descargar PDF limpio</a>
+    </div>
+    {% else %}
+    <form action="{{ url_for('limpiar_metadatos') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        <fieldset class="form-field">
+            <legend>Qué quieres eliminar</legend>
+            <label><input type="checkbox" name="clear_info" checked> Metadatos del documento (autor, título, fechas…)</label>
+            <label><input type="checkbox" name="clear_xmp" checked> Metadatos XMP incrustados</label>
+            <label><input type="checkbox" name="clear_attachments" checked> Archivos adjuntos incrustados</label>
+            <label><input type="checkbox" name="clear_js" checked> Scripts JavaScript y acciones automáticas</label>
+            <label><input type="checkbox" name="clear_page_meta" checked> Metadatos por página y del editor</label>
+        </fieldset>
+
+        <fieldset class="form-field">
+            <legend>Datos nuevos (opcional)</legend>
+            <p>Si rellenas alguno, se escribirá en el PDF limpio. Déjalo vacío para no añadir nada.</p>
+            <label for="meta_title">Título</label>
+            <input type="text" id="meta_title" name="title" maxlength="200">
+            <label for="meta_author">Autor</label>
+            <input type="text" id="meta_author" name="author" maxlength="200">
+            <label for="meta_subject">Asunto</label>
+            <input type="text" id="meta_subject" name="subject" maxlength="200">
+            <label for="meta_keywords">Palabras clave</label>
+            <input type="text" id="meta_keywords" name="keywords" maxlength="200">
+        </fieldset>
+
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Limpiar metadatos</button>
+    </form>
+    {% endif %}
+</section>
+
+{% if not success %}
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    submitBtn.disabled = true;
+</script>
+{% endif %}
+{% endblock %}

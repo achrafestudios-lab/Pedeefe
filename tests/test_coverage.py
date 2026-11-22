@@ -504,6 +504,112 @@ class TestOcrBranches(TempUploadMixin, unittest.TestCase):
         self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 
 
+class TestNewToolsBranches(TempUploadMixin, unittest.TestCase):
+    """Ramas de error y opciones de las herramientas nuevas de la oleada 2."""
+
+    def _download_and_assert_clean(self, resp):
+        match = re.search(r"/descargar_limpiar_metadatos/([0-9a-f-]+)",
+                          resp.data.decode("utf-8", "replace"))
+        self.assertIsNotNone(match)
+        download = self.client.get("/descargar_limpiar_metadatos/" + match.group(1))
+        self.assertEqual(download.status_code, 200)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+        return download
+
+    def test_ocr_a_pdf_missing_language_pack_message(self):
+        with patch.object(app_module, "convert_from_path", side_effect=RuntimeError(
+                "Error opening data file fra.traineddata")):
+            resp = self.client.post(
+                "/ocr-a-pdf",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "lang": "fra"},
+                content_type="multipart/form-data",
+            )
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn("tesseract-ocr-fra", body)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_ocr_a_pdf_missing_tesseract_message(self):
+        with patch.object(app_module, "convert_from_path", side_effect=RuntimeError(
+                "tesseract is not installed")):
+            resp = self.client.post(
+                "/ocr-a-pdf",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf")},
+                content_type="multipart/form-data",
+            )
+        self.assertIn("sudo apt install tesseract-ocr",
+                      resp.data.decode("utf-8", "replace"))
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_ocr_a_pdf_poppler_error_message(self):
+        with patch.object(app_module, "convert_from_path",
+                          side_effect=Exception("poppler no encontrado")):
+            resp = self.client.post(
+                "/ocr-a-pdf",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf")},
+                content_type="multipart/form-data",
+            )
+        self.assertIn("Poppler", resp.data.decode("utf-8", "replace"))
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_generic_ocr_error_is_reported(self):
+        message = app_module._ocr_error_message(RuntimeError("fallo inesperado"), "spa")
+        self.assertEqual(message, "fallo inesperado")
+
+    def test_metadata_tool_removes_attachments_js_and_xmp(self):
+        import pikepdf
+        from pikepdf import Dictionary, Name, String
+
+        source = pikepdf.new()
+        source.add_blank_page(page_size=(200, 200))
+        attachment = Dictionary(Type=Name.Filespec, F=String("secreto.txt"))
+        attachment.EF = Dictionary(F=source.make_stream(b"datos"))
+        names = Dictionary(
+            EmbeddedFiles=Dictionary(Names=[String("secreto.txt"), attachment]),
+            JavaScript=Dictionary(Names=[String("js"), source.make_stream(b"app.alert(1)")]),
+        )
+        source.Root.Names = names
+        action = Dictionary()
+        action.S = Name.JavaScript
+        action.JS = source.make_stream(b"app.alert(1)")
+        source.Root.OpenAction = action
+        source.Root.Metadata = source.make_stream(b"<x:xmpmeta/>")
+        for page in source.pages:
+            page.obj.Metadata = source.make_stream(b"<x:xmpmeta/>")
+            page.obj.PieceInfo = Dictionary()
+        buffer = io.BytesIO()
+        source.save(buffer)
+        source.close()
+
+        resp = self.client.post(
+            "/limpiar-metadatos",
+            data={
+                "file": (io.BytesIO(buffer.getvalue()), "a.pdf"),
+                "clear_xmp": "on", "clear_attachments": "on",
+                "clear_js": "on", "clear_page_meta": "on",
+            },
+            content_type="multipart/form-data",
+        )
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn("metadatos XMP", body)
+        self.assertIn("archivos adjuntos", body)
+        self.assertIn("scripts JavaScript", body)
+        self.assertIn("metadatos de página", body)
+        download = self._download_and_assert_clean(resp)
+        self.assertEqual(download.data[:5], b"%PDF-")
+
+    def test_metadata_tool_without_options_says_nothing_found(self):
+        resp = self.client.post(
+            "/limpiar-metadatos",
+            data={"file": (io.BytesIO(make_pdf_bytes()), "a.pdf")},
+            content_type="multipart/form-data",
+        )
+        self.assertIn("No se encontraron datos",
+                      resp.data.decode("utf-8", "replace"))
+        self._download_and_assert_clean(resp)
+
+
 class TestImageConversion(TempUploadMixin, unittest.TestCase):
     """Imagen a PDF usa el modo real de cada imagen (RGB, RGBA y escala de grises)."""
 

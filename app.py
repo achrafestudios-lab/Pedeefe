@@ -300,6 +300,8 @@ REFERER_TO_TEMPLATE = {
     "/proteger": "proteger.html",
     "/desproteger": "desproteger.html",
     "/ocr": "ocr.html",
+    "/ocr-a-pdf": "ocr_a_pdf.html",
+    "/limpiar-metadatos": "limpiar_metadatos.html",
     "/marcar-agua": "marcar_agua.html",
     "/numerar": "numerar.html",
     "/recortar-pdf": "recortar_pdf.html",
@@ -1275,6 +1277,27 @@ OCR_LANGUAGES = {
 }
 
 
+def _ocr_error_message(exc, lang):
+    """Convierte errores de Tesseract/Poppler en un mensaje accionable."""
+    error_msg = str(exc)
+    # Mensaje amigable si falta el traineddata del idioma elegido
+    if "traineddata" in error_msg.lower():
+        return (
+            f"Falta el idioma '{lang}' en Tesseract. Instálalo con: "
+            f"sudo apt install tesseract-ocr-{lang}"
+        )
+    # Mensaje amigable si Tesseract no está instalado
+    if "tesseract" in error_msg.lower() or "not found" in error_msg.lower():
+        return (
+            "No se encontró Tesseract OCR en el sistema. "
+            "Instálalo con: sudo apt install tesseract-ocr"
+        )
+    # Mensaje amigable si Poppler no está instalado
+    if "poppler" in error_msg.lower():
+        return f"No se encontró Poppler en el sistema. {DEPENDENCIES['poppler']['hint']}"
+    return error_msg
+
+
 @app.route("/ocr", methods=["GET", "POST"])
 def ocr():
     if request.method == "GET":
@@ -1333,20 +1356,277 @@ def ocr():
 
     except Exception as e:
         cleanup_folder(temp_dir)
-        error_msg = str(e)
-        # Mensaje amigable si falta el traineddata del idioma elegido
-        if "traineddata" in error_msg.lower():
-            error_msg = (
-                f"Falta el idioma '{lang}' en Tesseract. Instálalo con: "
-                f"sudo apt install tesseract-ocr-{lang}"
+        return render_template(
+            "ocr.html", error=f"Error al procesar: {_ocr_error_message(e, lang)}"
+        )
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── OCR a PDF buscable (capa de texto invisible) ─────────────────────
+
+def _ocr_text_layer(pdf_bytes):
+    """Quita la imagen de un PDF de Tesseract y deja solo su texto invisible.
+
+    Tesseract genera una página con la imagen a 200 ppp y el texto reconocido
+    en modo de renderizado 3 (invisible). Al eliminar los operadores `Do` y los
+    XObject de imagen, queda una capa de texto que se puede superponer sobre el
+    PDF original sin alterar su apariencia.
+    """
+    with pikepdf.open(BytesIO(pdf_bytes)) as layer_pdf:
+        if not layer_pdf.pages:
+            raise ValueError("Tesseract no devolvió ninguna página.")
+        page = layer_pdf.pages[0]
+        if "/Contents" in page.obj:
+            operators = pikepdf.parse_content_stream(page.obj.Contents)
+            page.obj.Contents = layer_pdf.make_stream(
+                pikepdf.unparse_content_stream(
+                    [op for op in operators if op.operator != "Do"]
+                )
             )
-        # Mensaje amigable si Tesseract no está instalado
-        elif "tesseract" in error_msg.lower() or "not found" in error_msg.lower():
-            error_msg = "No se encontró Tesseract OCR en el sistema. Instálalo con: sudo apt install tesseract-ocr"
-        # Mensaje amigable si Poppler no está instalado
-        elif "poppler" in error_msg.lower():
-            error_msg = f"No se encontró Poppler en el sistema. {DEPENDENCIES['poppler']['hint']}"
-        return render_template("ocr.html", error=f"Error al procesar: {error_msg}")
+        resources = page.obj.get("/Resources")
+        if resources is not None and "/XObject" in resources:
+            del resources["/XObject"]
+        result = BytesIO()
+        layer_pdf.save(result)
+    result.seek(0)
+    return result
+
+
+@app.route("/ocr-a-pdf", methods=["GET", "POST"])
+def ocr_a_pdf():
+    if request.method == "GET":
+        return render_template("ocr_a_pdf.html")
+
+    # Mismo allowlist que /ocr: nunca se pasa un idioma arbitrario a Tesseract.
+    lang = request.form.get("lang") or "spa"
+    if lang not in OCR_LANGUAGES:
+        return render_template("ocr_a_pdf.html", error="Selecciona un idioma de OCR válido.")
+
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("ocr_a_pdf.html", error="Selecciona un PDF para procesar.")
+
+    if not allowed_file(file.filename):
+        return render_template("ocr_a_pdf.html", error="El archivo seleccionado no es un PDF.")
+
+    size_error = validate_file_size(file, "ocr_a_pdf.html")
+    if size_error:
+        return size_error
+
+    temp_dir = _create_temp_dir()
+    keep_temp = False
+
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.{ext}")
+        file.save(filepath)
+
+        if not validate_pdf(filepath):
+            return render_template(
+                "ocr_a_pdf.html", error="El archivo no se puede leer como PDF."
+            )
+
+        # Una imagen por página, a 200 ppp como en /ocr.
+        images = convert_from_path(filepath, dpi=200)
+        reader = PdfReader(filepath)
+        writer = PdfWriter()
+
+        for page, image in zip(reader.pages, images):
+            layer_bytes = pytesseract.image_to_pdf_or_hocr(
+                image, lang=lang, extension="pdf"
+            )
+            layer = PdfReader(_ocr_text_layer(layer_bytes))
+            # pypdf 7 exige añadir la página antes de superponer (ver /marcar-agua).
+            writer.add_page(page)
+            writer.pages[-1].merge_page(layer.pages[0])
+
+        output_path = os.path.join(temp_dir, "buscable.pdf")
+        with open(output_path, "wb") as handle:
+            writer.write(handle)
+
+        keep_temp = True
+        return render_template(
+            "ocr_a_pdf.html",
+            success=True,
+            pages=len(images),
+            download_token=os.path.basename(temp_dir),
+        )
+
+    except Exception as e:
+        return render_template(
+            "ocr_a_pdf.html",
+            error=f"Error al procesar: {_ocr_error_message(e, lang)}",
+        )
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
+
+
+@app.route("/descargar_ocr_pdf/<token>")
+def descargar_ocr_pdf(token):
+    """Descarga el PDF con capa de texto y limpia su carpeta temporal."""
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
+    output_path = os.path.join(temp_dir, "buscable.pdf")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
+    try:
+        return send_file(output_path, as_attachment=True, download_name="buscable.pdf")
+    finally:
+        cleanup_folder(temp_dir)
+
+
+# ─── Limpieza de metadatos (sanitize) ─────────────────────────────────
+
+METADATA_REPLACEMENT_FIELDS = {
+    "title": "/Title",
+    "author": "/Author",
+    "subject": "/Subject",
+    "keywords": "/Keywords",
+}
+
+
+@app.route("/limpiar-metadatos", methods=["GET", "POST"])
+def limpiar_metadatos():
+    if request.method == "GET":
+        return render_template("limpiar_metadatos.html")
+
+    def fail(message):
+        return render_template("limpiar_metadatos.html", error=message)
+
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return fail("Selecciona un PDF para limpiar.")
+    if not allowed_file(file.filename):
+        return fail("El archivo seleccionado no es un PDF.")
+
+    size_error = validate_file_size(file, "limpiar_metadatos.html")
+    if size_error:
+        return size_error
+
+    options = {
+        "info": request.form.get("clear_info") == "on",
+        "xmp": request.form.get("clear_xmp") == "on",
+        "attachments": request.form.get("clear_attachments") == "on",
+        "js": request.form.get("clear_js") == "on",
+        "page_meta": request.form.get("clear_page_meta") == "on",
+    }
+    replacements = {}
+    for field, pdf_key in METADATA_REPLACEMENT_FIELDS.items():
+        value = request.form.get(field, "").strip()[:200]
+        if value:
+            replacements[pdf_key] = value
+
+    temp_dir = _create_temp_dir()
+    keep_temp = False
+
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        filepath = os.path.join(temp_dir, f"{uuid.uuid4()}.{ext}")
+        file.save(filepath)
+
+        if not validate_pdf(filepath):
+            return fail("El archivo no se puede leer como PDF.")
+
+        removed = []
+        detected = []
+        with pikepdf.open(filepath) as pdf:
+            detected = [str(key) for key in pdf.docinfo.keys()]
+
+            if options["info"]:
+                for key in list(pdf.docinfo.keys()):
+                    del pdf.docinfo[key]
+                if detected:
+                    removed.append(f"{len(detected)} campos de información")
+
+            # Los valores nuevos se escriben después de borrar los antiguos.
+            for key, value in replacements.items():
+                pdf.docinfo[key] = value
+
+            if options["xmp"] and "/Metadata" in pdf.Root:
+                del pdf.Root["/Metadata"]
+                removed.append("metadatos XMP")
+
+            if options["attachments"]:
+                names = pdf.Root.get("/Names")
+                if names is not None and "/EmbeddedFiles" in names:
+                    del names["/EmbeddedFiles"]
+                    removed.append("archivos adjuntos")
+                for obj in [pdf.Root] + list(pdf.pages):
+                    page_obj = getattr(obj, "obj", obj)
+                    if "/AF" in page_obj:
+                        del page_obj["/AF"]
+
+            if options["js"]:
+                names = pdf.Root.get("/Names")
+                if names is not None and "/JavaScript" in names:
+                    del names["/JavaScript"]
+                    removed.append("scripts JavaScript")
+                action = pdf.Root.get("/OpenAction")
+                if action is not None and (
+                    "/JS" in action or action.get("/S") == pikepdf.Name.JavaScript
+                ):
+                    del pdf.Root["/OpenAction"]
+                    if "scripts JavaScript" not in removed:
+                        removed.append("scripts JavaScript")
+                for page in pdf.pages:
+                    if "/AA" in page.obj:
+                        del page.obj["/AA"]
+
+            if options["page_meta"]:
+                page_count = 0
+                for page in pdf.pages:
+                    for key in ("/Metadata", "/PieceInfo", "/LastModified"):
+                        if key in page.obj:
+                            del page.obj[key]
+                            page_count += 1
+                if page_count:
+                    removed.append(f"{page_count} metadatos de página")
+
+            names = pdf.Root.get("/Names")
+            if names is not None and len(names) == 0:
+                del pdf.Root["/Names"]
+
+            output_path = os.path.join(temp_dir, "sin_metadatos.pdf")
+            pdf.save(output_path)
+
+        keep_temp = True
+        return render_template(
+            "limpiar_metadatos.html",
+            success=True,
+            removed=removed,
+            detected=detected,
+            download_token=os.path.basename(temp_dir),
+        )
+
+    except pikepdf.PasswordError:
+        return fail("El PDF está cifrado. Desprotégelo antes de limpiar sus metadatos.")
+    except Exception as e:
+        return fail(f"Error al limpiar metadatos: {str(e)}")
+    finally:
+        if not keep_temp:
+            cleanup_folder(temp_dir)
+
+
+@app.route("/descargar_limpiar_metadatos/<token>")
+def descargar_limpiar_metadatos(token):
+    """Descarga el PDF saneado y limpia su carpeta temporal."""
+    temp_dir = _safe_upload_dir(token)
+    if temp_dir is None:
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
+    output_path = os.path.join(temp_dir, "sin_metadatos.pdf")
+    if not os.path.exists(output_path):
+        return render_template("error.html", message="El archivo ya no está disponible."), 404
+
+    try:
+        return send_file(
+            output_path, as_attachment=True, download_name="sin_metadatos.pdf"
+        )
     finally:
         cleanup_folder(temp_dir)
 
@@ -3010,6 +3290,16 @@ API_TOOLS = {
     "ocr": {
         "label": "OCR", "endpoint": "ocr", "route": "/ocr",
         "files": [_api_file("file")], "params": ["lang"],
+    },
+    "ocr-a-pdf": {
+        "label": "OCR a PDF buscable", "endpoint": "ocr_a_pdf",
+        "route": "/ocr-a-pdf", "files": [_api_file("file")], "params": ["lang"],
+    },
+    "limpiar-metadatos": {
+        "label": "Limpiar metadatos", "endpoint": "limpiar_metadatos",
+        "route": "/limpiar-metadatos", "files": [_api_file("file")],
+        "params": ["clear_info", "clear_xmp", "clear_attachments", "clear_js",
+                   "clear_page_meta", "title", "author", "subject", "keywords"],
     },
     "marcar-agua": {
         "label": "Marcar con agua", "endpoint": "marcar_agua",

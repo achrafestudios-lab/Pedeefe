@@ -22,7 +22,8 @@ JS_PATH = ROOT / "static" / "js"
 
 PAGE_ROUTES = [
     "/", "/unir", "/dividir", "/recortar-pdf", "/reordenar-pdf",
-    "/comprimir", "/comprimir-real", "/ocr", "/pdf-a-imagen", "/imagen-a-pdf",
+    "/comprimir", "/comprimir-real", "/ocr", "/ocr-a-pdf",
+    "/limpiar-metadatos", "/pdf-a-imagen", "/imagen-a-pdf",
     "/pdf-a-word", "/pdf-a-excel", "/pdf-a-powerpoint", "/pdf-a-html", "/pdf-a-markdown",
     "/word-a-pdf", "/excel-a-pdf", "/powerpoint-a-pdf", "/html-a-pdf",
     "/rotar", "/numerar", "/marcar-agua", "/proteger", "/desproteger",

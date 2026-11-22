@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}OCR a PDF buscable{% endblock %}
+
+
+{% block meta_description %}Convierte un PDF escaneado en un PDF con texto seleccionable y buscable, usando OCR en local con Pedeefe.{% endblock %}
+{% block content %}
+<section class="tool-page">
+    <h1><span aria-hidden="true">🔎</span> OCR a PDF buscable</h1>
+    <p>Convierte un escaneo en un PDF con texto seleccionable y buscable. El aspecto del documento se conserva y se añade una capa de texto invisible.</p>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert" aria-live="assertive">
+        {{ error }}
+    </div>
+    {% endif %}
+
+    <div class="alert alert-warning">
+        Esta herramienta necesita <strong>Tesseract OCR</strong> y <strong>Poppler</strong> instalados en el sistema.
+        <br>Instálalos con: <code>sudo apt install tesseract-ocr poppler-utils</code>
+        <br>Para cada idioma hace falta su paquete, por ejemplo <code>tesseract-ocr-eng</code>.
+        <br>Las páginas se procesan a 200 ppp y el texto puede no alinearse en escaneos girados o recortados.
+    </div>
+
+    {% if success %}
+    <div class="result-box">
+        <h2><span aria-hidden="true">✅</span> PDF buscable listo</h2>
+        <p>Se ha añadido una capa de texto a {{ pages }} {{ 'página' if pages == 1 else 'páginas' }}.</p>
+        <a href="{{ url_for('descargar_ocr_pdf', token=download_token) }}" class="btn btn-primary">Descargar PDF buscable</a>
+    </div>
+    {% else %}
+    <form action="{{ url_for('ocr_a_pdf') }}" method="POST" enctype="multipart/form-data" class="upload-form">
+        {# Mantener en sync con OCR_LANGUAGES en app.py #}
+        <div class="form-field">
+            <label for="ocr-lang">Idioma del documento</label>
+            <select name="lang" id="ocr-lang">
+                {% for value, label in [
+                    ('spa', 'Español'), ('eng', 'English'), ('fra', 'Français'),
+                    ('deu', 'Deutsch'), ('ita', 'Italiano'), ('por', 'Português')
+                ] %}
+                <option value="{{ value }}" {% if request.form.get('lang', 'spa') == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="drop-zone" id="dropZone" role="button" tabindex="0" aria-labelledby="dropZoneText">
+            <p id="dropZoneText">Arrastra tu PDF aquí o haz clic para seleccionarlo</p>
+            <input type="file" name="file" accept=".pdf" id="fileInput" aria-labelledby="dropZoneText">
+        </div>
+        <div id="fileError" class="alert alert-error" role="alert" aria-live="assertive" hidden>Selecciona un archivo para continuar.</div>
+        <div id="fileList" class="file-list"></div>
+
+        <button type="submit" class="btn btn-primary" id="submitBtn">Crear PDF buscable</button>
+    </form>
+    {% endif %}
+</section>
+
+{% if not success %}
+<script>
+    const fileInput = document.getElementById("fileInput");
+    const fileList = document.getElementById("fileList");
+    const submitBtn = document.getElementById("submitBtn");
+
+    fileInput.addEventListener("change", updateFileList);
+
+    function updateFileList() {
+        fileList.innerHTML = "";
+        const files = fileInput.files;
+
+        if (files.length === 0) {
+            submitBtn.disabled = true;
+            return;
+        }
+
+        for (const file of files) {
+            const item = document.createElement("div");
+            item.className = "file-item";
+            item.textContent = file.name;
+            fileList.appendChild(item);
+        }
+
+        submitBtn.disabled = false;
+    }
+
+    submitBtn.disabled = true;
+</script>
+{% endif %}
+{% endblock %}

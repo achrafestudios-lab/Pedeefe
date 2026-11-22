@@ -50,6 +50,7 @@
         {{ tool('Optimizar PDF', 'comprimir', 'comprimir', 'Mejora la estructura del documento.', 'optimize') }}
         {{ tool('Comprimir PDF', 'comprimir_real', 'comprimir_real', 'Reduce el tamaño real del archivo.', 'optimize') }}
         {{ tool('OCR de PDF', 'ocr', 'ocr', 'Extrae texto de páginas escaneadas.', 'optimize', 'Requiere Tesseract' if not tesseract_available else '') }}
+        {{ tool('OCR a PDF buscable', 'ocr_a_pdf', 'ocr_a_pdf', 'Añade texto seleccionable a un escaneo.', 'optimize', 'Requiere Tesseract' if not tesseract_available else '') }}
 
         {{ tool('PDF a Imagen', 'pdf_a_imagen', 'pdf_a_imagen', 'Convierte cada página a JPG o PNG.', 'convert') }}
         {{ tool('Imágenes a PDF', 'imagen_a_pdf', 'imagen_a_pdf', 'Une imágenes en un único PDF.', 'convert') }}
@@ -71,6 +72,7 @@
 
         {{ tool('Proteger PDF', 'proteger', 'proteger', 'Añade una contraseña al archivo.', 'security') }}
         {{ tool('Desproteger PDF', 'desproteger', 'desproteger', 'Quita la contraseña de un PDF.', 'security') }}
+        {{ tool('Limpiar metadatos', 'limpiar_metadatos', 'limpiar_metadatos', 'Elimina datos ocultos antes de compartir.', 'security') }}
 
         {{ tool('Lotes PDF', 'lotes', 'lotes', 'Procesa varios PDFs a la vez.', 'productivity') }}
         {{ tool('Historial local', 'historial', 'historial', 'Recupera operaciones recientes.', 'productivity') }}

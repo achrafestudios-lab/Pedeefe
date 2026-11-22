@@ -17,6 +17,7 @@ import sys
 import tempfile
 import unittest
 import zipfile
+from unittest import mock
 
 from pypdf import PdfReader
 from reportlab.lib.pagesizes import A4
@@ -814,6 +815,216 @@ class TestOcrTools(TempUploadMixin, unittest.TestCase):
         resp = self.client.post("/ocr", data=data, content_type="multipart/form-data")
         self.assertEqual(resp.status_code, 200)
         self.assertIn(b"PEDEEFE", resp.data.upper())
+
+
+def make_tesseract_layer_bytes(text="Hola buscable"):
+    """PDF de una página con imagen y texto invisible, como el que emite Tesseract."""
+    import pikepdf
+    from pikepdf import Dictionary, Name
+
+    pdf = pikepdf.new()
+    page = pdf.add_blank_page(page_size=(200, 200))
+    image = pdf.make_stream(b"\x00" * 3)
+    image.Type = Name.XObject
+    image.Subtype = Name.Image
+    image.Width = 1
+    image.Height = 1
+    image.ColorSpace = Name.DeviceRGB
+    image.BitsPerComponent = 8
+    font = Dictionary(Type=Name.Font, Subtype=Name.Type1, BaseFont=Name.Helvetica)
+    page.obj.Resources = Dictionary(
+        XObject=Dictionary(Im0=image), Font=Dictionary(F1=font)
+    )
+    content = (
+        b"q 200 0 0 200 0 0 cm /Im0 Do Q "
+        b"BT /F1 12 Tf 3 Tr 10 100 Td (" + text.encode("ascii") + b") Tj ET"
+    )
+    page.obj.Contents = pdf.make_stream(content)
+    out = io.BytesIO()
+    pdf.save(out)
+    pdf.close()
+    return out.getvalue()
+
+
+class TestOcrToSearchablePdfTools(TempUploadMixin, unittest.TestCase):
+    """El texto de Tesseract se superpone al PDF original sin tocar dependencias."""
+
+    def _post(self, **extra):
+        pdf = make_pdf_bytes(pagesize=(200, 200))
+        data = {"file": (io.BytesIO(pdf), "a.pdf")}
+        data.update(extra)
+        with mock.patch.object(
+            app_module, "convert_from_path",
+            return_value=[Image.new("RGB", (20, 20))],
+        ), mock.patch.object(
+            app_module.pytesseract, "image_to_pdf_or_hocr",
+            side_effect=lambda image, lang=None, extension=None:
+                make_tesseract_layer_bytes(),
+        ) as recognize:
+            resp = self.client.post(
+                "/ocr-a-pdf", data=data, content_type="multipart/form-data"
+            )
+        return resp, recognize
+
+    def test_get_200(self):
+        self.assertEqual(self.client.get("/ocr-a-pdf").status_code, 200)
+
+    def test_post_devuelve_pdf_buscable(self):
+        resp, recognize = self._post()
+        self.assertEqual(resp.status_code, 200)
+        recognize.assert_called_once()
+        self.assertEqual(recognize.call_args.kwargs["extension"], "pdf")
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        match = re.search(r"/descargar_ocr_pdf/([0-9a-f-]+)", body)
+        self.assertIsNotNone(match)
+        download = self.client.get("/descargar_ocr_pdf/" + match.group(1))
+        self.assertEqual(download.status_code, 200)
+        self.assertIn("buscable.pdf", download.headers.get("Content-Disposition", ""))
+        text = PdfReader(io.BytesIO(download.data)).pages[0].extract_text()
+        self.assertIn("Hola buscable", text)
+        self.assertIn("Pedeefe test", text)
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_post_respeta_idioma(self):
+        resp, recognize = self._post(lang="eng")
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(recognize.call_args.kwargs["lang"], "eng")
+
+    def test_invalid_language_does_not_call_tesseract(self):
+        pdf = make_pdf_bytes()
+        with mock.patch.object(app_module.pytesseract, "image_to_pdf_or_hocr") as rec:
+            resp = self.client.post(
+                "/ocr-a-pdf",
+                data={"file": (io.BytesIO(pdf), "a.pdf"), "lang": "xx"},
+                content_type="multipart/form-data",
+            )
+        self.assertIn("idioma de OCR", resp.data.decode("utf-8", "replace"))
+        rec.assert_not_called()
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_missing_file_shows_error(self):
+        resp = self.client.post("/ocr-a-pdf", data={})
+        self.assertIn("Selecciona un PDF", resp.data.decode("utf-8", "replace"))
+
+    def test_wrong_extension_shows_error(self):
+        resp = self.client.post(
+            "/ocr-a-pdf", data={"file": (io.BytesIO(b"x"), "a.txt")},
+            content_type="multipart/form-data",
+        )
+        self.assertIn("no es un PDF", resp.data.decode("utf-8", "replace"))
+
+    def test_corrupt_pdf_shows_error_and_cleans_up(self):
+        resp = self.client.post(
+            "/ocr-a-pdf", data={"file": (io.BytesIO(b"not a pdf"), "a.pdf")},
+            content_type="multipart/form-data",
+        )
+        self.assertIn("no se puede leer como PDF", resp.data.decode("utf-8", "replace"))
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_download_without_token_is_404(self):
+        self.assertEqual(self.client.get("/descargar_ocr_pdf/nope").status_code, 404)
+
+
+class TestCleanMetadataTools(TempUploadMixin, unittest.TestCase):
+    def test_get_200(self):
+        self.assertEqual(self.client.get("/limpiar-metadatos").status_code, 200)
+
+    def _pdf_with_metadata(self):
+        buf = io.BytesIO()
+        pdf = canvas.Canvas(buf, pagesize=A4, invariant=1)
+        pdf.setTitle("Titulo secreto")
+        pdf.setAuthor("Autor secreto")
+        pdf.setSubject("Asunto")
+        pdf.setCreator("Generador")
+        pdf.drawString(100, 700, "Contenido")
+        pdf.showPage()
+        pdf.save()
+        return buf.getvalue()
+
+    def test_post_clears_metadata_and_downloads(self):
+        resp = self.client.post(
+            "/limpiar-metadatos",
+            data={
+                "file": (io.BytesIO(self._pdf_with_metadata()), "a.pdf"),
+                "clear_info": "on", "clear_xmp": "on",
+                "clear_attachments": "on", "clear_js": "on",
+                "clear_page_meta": "on",
+            },
+            content_type="multipart/form-data",
+        )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn("campos de información", body)
+        match = re.search(r"/descargar_limpiar_metadatos/([0-9a-f-]+)", body)
+        self.assertIsNotNone(match)
+        download = self.client.get("/descargar_limpiar_metadatos/" + match.group(1))
+        self.assertEqual(download.status_code, 200)
+        self.assertIn("sin_metadatos.pdf", download.headers.get("Content-Disposition", ""))
+        reader = PdfReader(io.BytesIO(download.data))
+        self.assertFalse(reader.metadata)
+        self.assertEqual(len(reader.pages), 1)
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_post_can_write_replacement_metadata(self):
+        resp = self.client.post(
+            "/limpiar-metadatos",
+            data={
+                "file": (io.BytesIO(self._pdf_with_metadata()), "a.pdf"),
+                "clear_info": "on", "title": "Titulo nuevo", "author": "Autor nuevo",
+            },
+            content_type="multipart/form-data",
+        )
+        match = re.search(
+            r"/descargar_limpiar_metadatos/([0-9a-f-]+)",
+            resp.data.decode("utf-8", "replace"),
+        )
+        self.assertIsNotNone(match)
+        download = self.client.get("/descargar_limpiar_metadatos/" + match.group(1))
+        metadata = PdfReader(io.BytesIO(download.data)).metadata
+        self.assertEqual(metadata.title, "Titulo nuevo")
+        self.assertEqual(metadata.author, "Autor nuevo")
+
+    def test_missing_file_shows_error(self):
+        resp = self.client.post("/limpiar-metadatos", data={})
+        self.assertIn("Selecciona un PDF", resp.data.decode("utf-8", "replace"))
+
+    def test_wrong_extension_shows_error(self):
+        resp = self.client.post(
+            "/limpiar-metadatos", data={"file": (io.BytesIO(b"x"), "a.txt")},
+            content_type="multipart/form-data",
+        )
+        self.assertIn("no es un PDF", resp.data.decode("utf-8", "replace"))
+
+    def test_corrupt_pdf_shows_error_and_cleans_up(self):
+        resp = self.client.post(
+            "/limpiar-metadatos", data={"file": (io.BytesIO(b"not a pdf"), "a.pdf")},
+            content_type="multipart/form-data",
+        )
+        self.assertIn("no se puede leer como PDF", resp.data.decode("utf-8", "replace"))
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_encrypted_pdf_has_actionable_message(self):
+        import pikepdf
+        from pikepdf import Encryption
+
+        source = pikepdf.open(io.BytesIO(self._pdf_with_metadata()))
+        output = io.BytesIO()
+        source.save(output, encryption=Encryption(user="clave", owner="clave"))
+        source.close()
+        output.seek(0)
+        resp = self.client.post(
+            "/limpiar-metadatos", data={"file": (output, "cifrado.pdf")},
+            content_type="multipart/form-data",
+        )
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("cifrado", body)
+        self.assertIn("Desprotege", body)
+        self.assertEqual(os.listdir(self.uploads), [])
+
+    def test_download_without_token_is_404(self):
+        self.assertEqual(self.client.get("/descargar_limpiar_metadatos/nope").status_code, 404)
 
 
 class TestRepoUploadsEmptyTools(unittest.TestCase):

@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-320%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-345%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -79,11 +79,12 @@
 
 ## ¿Qué es Pedeefe?
 
-Pedeefe es una aplicación web que reúne **29 herramientas para trabajar con
+Pedeefe es una aplicación web que reúne **31 herramientas para trabajar con
 PDFs**: unir, dividir, recortar, reordenar, optimizar, comprimir, convertir,
 rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, exportar
-a Markdown, extraer texto mediante OCR en seis idiomas y ahorrar tiempo con
-lotes, historial local y plantillas.
+a Markdown, extraer texto mediante OCR en seis idiomas, crear PDF buscables,
+limpiar metadatos ocultos y ahorrar tiempo con lotes, historial local y
+plantillas.
 
 **Todo ocurre en tu máquina.** No hay servidor público, no se envían archivos a
 ningún servicio externo y no hay base de datos. El servidor Flask corre en
@@ -93,7 +94,7 @@ red compartida. En el escritorio se usa un puerto efímero solo en loopback.
 
 ### Características principales
 
-- 📄 **29 herramientas en un solo lugar.** Organización, conversión, edición,
+- 📄 **31 herramientas en un solo lugar.** Organización, conversión, edición,
   optimización, seguridad, análisis y productividad.
 - 🔒 **100 % local y privado.** Los archivos nunca salen del equipo; se eliminan
   al terminar la operación o tras la descarga.
@@ -117,7 +118,7 @@ red compartida. En el escritorio se usa un puerto efímero solo en loopback.
 - 📲 **PWA instalable (v1.9).** Instala la web como una app más en tu equipo desde
   `127.0.0.1` o `localhost`. Guarda solo la cáscara para abrirla sin servidor;
   las herramientas siguen necesitando el backend local.
-- 🤖 **API y CLI local (v2.0).** Automatiza 27 herramientas de procesamiento desde
+- 🤖 **API y CLI local (v2.0).** Automatiza 29 herramientas de procesamiento desde
   scripts o la terminal, sobre el mismo backend de `127.0.0.1` y con un token
   local. No abre otro puerto ni duplica la lógica de PDF.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español e inglés),
@@ -148,11 +149,11 @@ temporal por token UUID. Para probar la app, abre `http://127.0.0.1:43210`.
 | Grupo | Qué permite |
 |---|---|
 | Organizar | Unir varios PDFs, dividir por páginas o rangos, conservar páginas concretas y cambiar su orden |
-| Optimizar e OCR | Optimizar la estructura, comprimir con Ghostscript y extraer texto de escaneos en seis idiomas |
+| Optimizar e OCR | Optimizar la estructura, comprimir con Ghostscript, extraer texto de escaneos en seis idiomas y crear PDF buscables |
 | Convertir a PDF | Imágenes, Word, Excel, PowerPoint y HTML → PDF |
 | Convertir desde PDF | PDF → imagen, Word, Excel, PowerPoint, HTML y Markdown |
 | Editar | Rotar, numerar páginas y añadir marca de agua |
-| Seguridad | Proteger con contraseña y desproteger |
+| Seguridad | Proteger con contraseña, desproteger y limpiar metadatos, adjuntos y scripts ocultos |
 | Productividad | Lotes con ZIP, historial local y plantillas reutilizables |
 
 ---
@@ -271,7 +272,7 @@ curl -H "Authorization: Bearer $TOKEN" \
   http://127.0.0.1:43210/api/v1/tools/unir -o unido.pdf
 ```
 
-- `GET /api/v1/tools` devuelve las **27 herramientas de procesamiento**, con sus
+- `GET /api/v1/tools` devuelve las **29 herramientas de procesamiento**, con sus
   campos de archivo y parámetros. «Historial» y «Plantillas» no aparecen: viven
   solo en el navegador.
 - `POST /api/v1/tools/<slug>` devuelve el archivo resultante (`Content-Disposition`
@@ -343,7 +344,7 @@ que falte.
 |---|---|---|
 | Poppler (`pdftoppm`) | PDF → imagen, PDF → Word | Sí, para esas herramientas |
 | Ghostscript (`gs`) | Comprimir PDF | Solo para esa herramienta |
-| Tesseract (`spa`, `eng`, `fra`, `deu`, `ita`, `por`) | OCR de PDF | Solo para esa herramienta |
+| Tesseract (`spa`, `eng`, `fra`, `deu`, `ita`, `por`) | OCR de PDF y OCR a PDF buscable | Solo para esas herramientas |
 | LibreOffice | Convertir Office → PDF | Opcional: hay alternativa en Python para DOCX/XLSX/PPTX/HTML |
 
 Si falta Tesseract, la tarjeta de OCR y el panel lo avisan. Si faltan Poppler,
@@ -425,7 +426,7 @@ Notas de uso:
 |---|---|---|
 | `GET` | `/` | Portada con el catálogo de herramientas |
 | `GET` | `/manifest.webmanifest` | Manifiesto de la PWA (MIME `application/manifest+json`) |
-| `GET` | `/sw.js` | Service worker de la PWA (ámbito `/`, caché solo de la cáscara `pedeefe-v2.3.2-ui`) |
+| `GET` | `/sw.js` | Service worker de la PWA (ámbito `/`, caché solo de la cáscara `pedeefe-v2.3.3-ui`) |
 | `GET`/`POST` | `/unir` | Une varios PDFs en uno |
 | `GET`/`POST` | `/dividir` | Divide o extrae un rango de páginas |
 | `GET`/`POST` | `/recortar-pdf` | Conserva solo las páginas indicadas |
@@ -464,8 +465,8 @@ Notas de uso:
 | `GET` | `/api/v1/tools` | Catálogo de la API local (requiere token) |
 | `POST` | `/api/v1/tools/<slug>` | Ejecuta una herramienta y devuelve archivo o JSON (requiere token) |
 
-Los archivos estáticos se sirven desde `/static/`. En total son **40 rutas de
-aplicación**; `url_map` registra 41 porque Flask añade la regla de `/static/`.
+Los archivos estáticos se sirven desde `/static/`. En total son **44 rutas de
+aplicación**; `url_map` registra 45 porque Flask añade la regla de `/static/`.
 
 ---
 
@@ -524,7 +525,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 320 casos (dos omisiones: los tests reales de OCR en español e inglés,
+Incluye 345 casos (dos omisiones: los tests reales de OCR en español e inglés,
 porque Tesseract no está disponible en este entorno local; en Docker y en CI se
 ejecutan y comprueban el texto extraído):
 
@@ -752,6 +753,18 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### Sin publicar (oleada 2)
+
+- **OCR a PDF buscable:** `/ocr-a-pdf` añade una capa de texto invisible sobre
+  el PDF original usando Tesseract y Poppler, con el mismo allowlist de seis
+  idiomas que `/ocr`. Sin dependencias Python nuevas.
+- **Limpiar metadatos:** `/limpiar-metadatos` inspecciona y elimina información
+  del documento, XMP, adjuntos incrustados, scripts y metadatos por página, y
+  permite escribir título, autor, asunto o palabras clave nuevos. El PDF
+  cifrado se rechaza con un mensaje accionable.
+- Ambos están en la portada, el menú, la API local y el CLI. La caché de la PWA
+  pasa a `pedeefe-v2.3.3-ui` para incluir sus iconos.
+
 ### v2.3.1 (logo de Pedeefe en el escritorio)
 
 - **Icono de la app:** el ejecutable y el instalador de Windows, los accesos
@@ -976,7 +989,7 @@ paquetes del sistema Tesseract; ninguna de las dos añade dependencias Python.
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
 | API/CLI local | Sí | No | No | No | Sí |
-| 29 herramientas | Sí | Parcial | Parcial | Parcial | No |
+| 31 herramientas | Sí | Parcial | Parcial | Parcial | No |
 
 **Nota sobre la licencia:** MIT + Commons Clause no es una licencia aprobada
 por OSI: puedes ver, usar y modificar el código, pero no vender Pedeefe ni
@@ -1009,10 +1022,10 @@ Pedeefe se construye sobre proyecto open source:
 
 | Métrica | Valor |
 |---|---|
-| Herramientas web | 29 (27 expuestas en la API local) |
-| Rutas HTTP | 40 de aplicación (41 reglas en `url_map`) |
-| Plantillas Jinja2 | 32 |
-| Tests | 320 (2 omitidos en local) |
+| Herramientas web | 31 (29 expuestas en la API local) |
+| Rutas HTTP | 44 de aplicación (45 reglas en `url_map`) |
+| Plantillas Jinja2 | 34 |
+| Tests | 345 (2 omitidos en local) |
 | Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15, versiones fijadas con `==` |

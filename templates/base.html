@@ -47,6 +47,7 @@
                                 <a href="{{ url_for('comprimir') }}" {% if request.endpoint == 'comprimir' %}aria-current="page"{% endif %}><span aria-hidden="true">📦</span> Optimizar PDF</a>
                                 <a href="{{ url_for('comprimir_real') }}" {% if request.endpoint == 'comprimir_real' %}aria-current="page"{% endif %}><span aria-hidden="true">🗜️</span> Comprimir PDF</a>
                                 <a href="{{ url_for('ocr') }}" {% if request.endpoint == 'ocr' %}aria-current="page"{% endif %}><span aria-hidden="true">🔍</span> OCR de PDF</a>
+                                <a href="{{ url_for('ocr_a_pdf') }}" {% if request.endpoint == 'ocr_a_pdf' %}aria-current="page"{% endif %}><span aria-hidden="true">🔎</span> OCR a PDF buscable</a>
                             </li>
                             <li class="nav-column">
                                 <span class="nav-column-title">Convertir a PDF</span>
@@ -77,6 +78,7 @@
                                 <span class="nav-column-title">Seguridad de PDF</span>
                                 <a href="{{ url_for('proteger') }}" {% if request.endpoint == 'proteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔒</span> Proteger PDF</a>
                                 <a href="{{ url_for('desproteger') }}" {% if request.endpoint == 'desproteger' %}aria-current="page"{% endif %}><span aria-hidden="true">🔓</span> Desproteger PDF</a>
+                                <a href="{{ url_for('limpiar_metadatos') }}" {% if request.endpoint == 'limpiar_metadatos' %}aria-current="page"{% endif %}><span aria-hidden="true">🧼</span> Limpiar metadatos</a>
                             </li>
                             <li class="nav-column">
                                 <span class="nav-column-title">Productividad</span>
