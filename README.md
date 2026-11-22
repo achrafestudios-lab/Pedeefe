@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-318%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-320%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -512,7 +512,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 318 casos (dos omisiones: los tests reales de OCR en español e inglés,
+Incluye 320 casos (dos omisiones: los tests reales de OCR en español e inglés,
 porque Tesseract no está disponible en este entorno local; en Docker y en CI se
 ejecutan y comprueban el texto extraído):
 
@@ -730,7 +730,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
   contra una lista de solo esos seis valores y explica qué paquete instalar
   si falta el `traineddata`. La API local expone el parámetro `lang` y la CLI lo
   pasa como opción. Sin dependencias Python nuevas: los idiomas son paquetes del
-  sistema. 6 tests nuevos (318 en total), incluido uno real en inglés.
+  sistema. 6 tests nuevos (318 en esa versión; 320 con los iconos de escritorio), incluido uno real en inglés.
 - Los instaladores de escritorio se regeneran como `2.3.0`.
 
 ### v2.2.0 (PDF a Markdown y cobertura)
@@ -965,7 +965,7 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas web | 29 (27 expuestas en la API local) |
 | Rutas HTTP | 40 de aplicación (41 reglas en `url_map`) |
 | Plantillas Jinja2 | 32 |
-| Tests | 318 (2 omitidos en local) |
+| Tests | 320 (2 omitidos en local) |
 | Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15, versiones fijadas con `==` |

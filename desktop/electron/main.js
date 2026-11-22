@@ -49,6 +49,7 @@ function createWindow() {
     minWidth: 820,
     minHeight: 600,
     title: 'Pedeefe',
+    icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     show: false,
     webPreferences: {
       nodeIntegration: false,

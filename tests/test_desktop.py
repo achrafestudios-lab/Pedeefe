@@ -10,6 +10,7 @@ Electron. Ejecutar:
 import json
 import os
 import queue
+import struct
 import subprocess
 import sys
 import tempfile
@@ -148,6 +149,27 @@ class TestDesktopPackaging(unittest.TestCase):
         self.assertIn("dmg", mac_targets)
         self.assertIn("zip", mac_targets)
         self.assertIsNone(build["mac"]["identity"])
+
+    def test_icon_configuration(self):
+        build = self.config["build"]
+        self.assertEqual(build["directories"]["buildResources"], "assets")
+        self.assertEqual(build["win"]["icon"], "assets/icon.ico")
+        self.assertEqual(build["mac"]["icon"], "assets/icon.icns")
+        self.assertEqual(build["linux"]["icon"], "assets/icon.png")
+        self.assertIn("assets/icon.png", build["files"])
+        main_js = (ROOT / "desktop" / "electron" / "main.js").read_text(encoding="utf-8")
+        self.assertIn("icon: path.join(__dirname, '..', 'assets', 'icon.png')", main_js)
+
+    def test_icon_assets_are_valid(self):
+        assets = ROOT / "desktop" / "assets"
+        png = (assets / "icon.png").read_bytes()
+        ico = (assets / "icon.ico").read_bytes()
+        icns = (assets / "icon.icns").read_bytes()
+        self.assertTrue(png.startswith(b"\x89PNG\r\n\x1a\n"))
+        self.assertEqual(png[16:24], struct.pack(">II", 1024, 1024))
+        self.assertTrue(ico.startswith(b"\x00\x00\x01\x00"))
+        self.assertTrue(icns.startswith(b"icns"))
+        self.assertGreater(len(icns), 8)
 
 
 class TestDesktopSidecar(unittest.TestCase):
