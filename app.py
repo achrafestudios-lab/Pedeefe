@@ -711,7 +711,7 @@ def comprimir_real():
 
         output_path = os.path.join(temp_dir, "comprimido.pdf")
         try:
-            result = subprocess.run(
+            subprocess.run(
                 [
                     gs_bin,
                     "-sDEVICE=pdfwrite",

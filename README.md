@@ -129,15 +129,19 @@ red compartida. En el escritorio se usa un puerto efímero solo en loopback.
 
 ## Capturas de pantalla
 
-No hay capturas de pantalla versionadas: el repositorio incluye el logo, los
-iconos y el fondo en `static/`, pero no imágenes de la interfaz. Puedes verla
-ejecutando la app y abriendo `http://127.0.0.1:43210`.
+Imágenes reales de la interfaz (sin montajes), capturadas desde la app local:
 
-| Vista | Descripción |
+| Portada — tema claro | Portada — tema oscuro |
 |---|---|
-| Portada | Rejilla con las 29 herramientas y navegación desplegable por grupos |
-| Herramienta | Formulario de subida, opciones, resultado y descarga |
-| Resultado | Enlace de descarga temporal por token UUID para conversiones largas |
+| <img src="static/screenshots/inicio-claro.png" alt="Portada de Pedeefe en tema claro con la rejilla de herramientas" width="420"> | <img src="static/screenshots/inicio-oscuro.png" alt="Portada de Pedeefe en tema oscuro con la rejilla de herramientas" width="420"> |
+
+Herramienta «Unir PDF» (tema claro): formulario de subida, opciones y estado
+antes de procesar.
+
+<img src="static/screenshots/unir-claro.png" alt="Formulario de Unir PDF en tema claro" width="560">
+
+El resultado de las conversiones largas se entrega con un enlace de descarga
+temporal por token UUID. Para probar la app, abre `http://127.0.0.1:43210`.
 
 ### Funcionalidades
 
@@ -568,9 +572,19 @@ en cada push y Pull Request a `main`.
 
 ## Lint
 
-No hay linter ni formateador configurado (`ruff`, `flake8` y `black` no están
-instalados). El estilo del proyecto es: 4 espacios, `snake_case`, comillas
-dobles y secciones separadas con comentarios `# ─── ...`.
+Se usa **ruff** solo como herramienta de desarrollo, con reglas esenciales de
+errores (`E4`, `E7`, `E9`, `F`) definidas en `ruff.toml` y ejecutadas también en
+CI. No reformatea el código y **no es una dependencia de ejecución**: no está en
+`requirements.txt`. Para instalarlo y comprobarlo en local:
+
+```bash
+.venv/bin/python -m pip install ruff==0.17.5
+.venv/bin/ruff check .
+```
+
+El estilo del proyecto es: 4 espacios, `snake_case`, comillas dobles y
+secciones separadas con comentarios `# ─── ...`. No hay formateador
+automático (`black`).
 
 ---
 
@@ -607,6 +621,7 @@ static/manifest.json    Manifiesto de instalación (v1.9)
 static/offline.html     Página de aviso sin servidor local (v1.9)
 static/brand/           Logo, favicon y variantes SVG de la marca
 static/img/             Fondo local de la interfaz
+static/screenshots/     Capturas reales de la interfaz (claro y oscuro)
 static/icons/           Iconos PNG de la PWA y SVG de las herramientas
 tests/                  Suite unittest (humo, herramientas, conversiones, v1.4–v2.3)
 desktop/                Cáscara Electron, sidecar Flask y spec de PyInstaller (v1.8)
@@ -956,12 +971,17 @@ paquetes del sistema Tesseract; ninguna de las dos añade dependencias Python.
 | Interfaz web local | Sí | No | No | Sí (escritorio) | No (CLI) |
 | Sin subir archivos | Sí | No | No | Sí (escritorio) | Sí |
 | Sin cuenta | Sí | No | No | Sí | Sí |
-| Código abierto | Sí | No | No | Parcial | Sí |
+| Código abierto | MIT + Commons Clause (*source-available*) | No | No | Parcial | Sí |
 | Interfaz en español | Sí | Sí | Sí | Sí | No |
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
 | API/CLI local | Sí | No | No | No | Sí |
 | 29 herramientas | Sí | Parcial | Parcial | Parcial | No |
+
+**Nota sobre la licencia:** MIT + Commons Clause no es una licencia aprobada
+por OSI: puedes ver, usar y modificar el código, pero no vender Pedeefe ni
+ofrecer un servicio cuyo valor dependa sustancialmente de él. El texto completo
+está en la sección [Licencia](#licencia).
 
 **Diferenciador clave:** Pedeefe es una caja de herramientas PDF en español,
 local y sin cuenta, con Docker listo y conversiones en ambos sentidos.
@@ -1012,8 +1032,9 @@ Pedeefe se construye sobre proyecto open source:
 4. Ejecuta los tests: `.venv/bin/python -m unittest discover -s tests`.
 5. Comprueba la sintaxis:
    `.venv/bin/python -m py_compile app.py local_token.py cli/pedeefe.py desktop/launcher.py`.
-6. Commitea y haz push.
-7. Abre un Pull Request.
+6. Si tienes `ruff` instalado en `.venv`, ejecuta `.venv/bin/ruff check .`.
+7. Commitea y haz push.
+8. Abre un Pull Request.
 
 ### Convenciones
 

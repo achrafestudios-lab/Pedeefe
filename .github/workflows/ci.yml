@@ -39,6 +39,12 @@ jobs:
       - name: Comprobar dependencias
         run: python -m pip check
 
+      - name: Instalar ruff (solo desarrollo)
+        run: python -m pip install ruff==0.17.5
+
+      - name: Analizar con ruff
+        run: ruff check .
+
       - name: Comprobar sintaxis
         run: python -m py_compile app.py local_token.py cli/pedeefe.py desktop/launcher.py
 

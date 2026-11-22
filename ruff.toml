@@ -1,0 +1,14 @@
+# Ruff se usa solo como herramienta de desarrollo: no va en requirements.txt.
+# Reglas esenciales (errores reales), sin reglas de estilo que obliguen a
+# reformatear el monolito existente.
+extend-exclude = [
+  ".venv",
+  "uploads",
+  "desktop/node_modules",
+  "desktop/build",
+  "desktop/dist",
+  "desktop/backend-dist",
+]
+
+[lint]
+select = ["E4", "E7", "E9", "F"]

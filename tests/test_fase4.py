@@ -18,7 +18,6 @@ from pypdf import PdfReader
 from pptx import Presentation
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfgen import canvas
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 
 import app as app_module

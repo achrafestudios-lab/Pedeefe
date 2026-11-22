@@ -23,8 +23,6 @@ try:
 except ImportError:  # pragma: no cover — versiones antiguas
     import fitz
 
-import app as app_module
-
 try:
     from test_tools import TempUploadMixin, assert_no_traceback, make_pdf_bytes
 except ImportError:  # ejecución como paquete

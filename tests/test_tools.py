@@ -17,10 +17,9 @@ import sys
 import tempfile
 import unittest
 import zipfile
-from io import BytesIO
 
-from pypdf import PdfReader, PdfWriter
-from reportlab.lib.pagesizes import A4, letter
+from pypdf import PdfReader
+from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from PIL import Image
 
