@@ -138,7 +138,7 @@ con Docker y abriendo `http://localhost:43210`.
 | Grupo | Qué permite |
 |---|---|
 | Organizar | Unir varios PDFs, dividir por páginas o rangos, conservar páginas concretas y cambiar su orden |
-| Optimizar e OCR | Optimizar la estructura, comprimir con Ghostscript y extraer texto de escaneos |
+| Optimizar e OCR | Optimizar la estructura, comprimir con Ghostscript y extraer texto de escaneos en seis idiomas |
 | Convertir a PDF | Imágenes, Word, Excel, PowerPoint y HTML → PDF |
 | Convertir desde PDF | PDF → imagen, Word, Excel, PowerPoint y HTML |
 | Editar | Rotar, numerar páginas y añadir marca de agua |
@@ -176,13 +176,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.2.0`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.3.0`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.2.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.2.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.2.0-mac-x64.dmg` / `Pedeefe-2.2.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.3.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.3.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.3.0-mac-x64.dmg` / `Pedeefe-2.3.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -210,7 +210,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.2.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.3.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -320,15 +320,15 @@ que falte.
 
 | Sistema | Comando o fuente |
 |---|---|
-| Ubuntu/Debian | `sudo apt install poppler-utils tesseract-ocr tesseract-ocr-spa ghostscript libreoffice` |
+| Ubuntu/Debian | `sudo apt install poppler-utils tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng ghostscript libreoffice` |
 | macOS (Homebrew) | `brew install poppler ghostscript tesseract tesseract-lang` y `brew install --cask libreoffice` |
-| Windows | Instala Poppler for Windows (añade su carpeta `bin` al PATH), Ghostscript, Tesseract OCR con datos en español y LibreOffice |
+| Windows | Instala Poppler for Windows (añade su carpeta `bin` al PATH), Ghostscript, Tesseract OCR con los datos de idioma que vayas a usar y LibreOffice |
 
 | Dependencia | Se necesita para | ¿Obligatoria? |
 |---|---|---|
 | Poppler (`pdftoppm`) | PDF → imagen, PDF → Word | Sí, para esas herramientas |
 | Ghostscript (`gs`) | Comprimir PDF | Solo para esa herramienta |
-| Tesseract (`spa`) | OCR de PDF | Solo para esa herramienta |
+| Tesseract (`spa`, `eng`, `fra`, `deu`, `ita`, `por`) | OCR de PDF | Solo para esa herramienta |
 | LibreOffice | Convertir Office → PDF | Opcional: hay alternativa en Python para DOCX/XLSX/PPTX/HTML |
 
 Si falta Tesseract, la tarjeta de OCR y el panel lo avisan. Si faltan Poppler,
@@ -391,7 +391,9 @@ Notas de uso:
 - **Reordenar** acepta un orden (`3,1,2`) y permite duplicar páginas (`1,1,2`).
 - **Comprimir** informa del porcentaje real de reducción; si el archivo ya
   está optimizado, lo dice sin prometer una mejora.
-- **OCR** depende de Tesseract con datos de idioma español.
+- **OCR** elige el idioma del documento entre seis opciones (español, inglés,
+  francés, alemán, italiano y portugués); depende de Tesseract con el paquete
+  de datos del idioma seleccionado.
 - **Lotes** aplica una misma operación (rotar, optimizar, proteger, desproteger,
   marcar con agua o numerar) a varios PDFs y devuelve un ZIP. Límites por petición:
   10 archivos, 200 páginas en total y 50 MB. No incluye firma ni OCR.
@@ -423,7 +425,7 @@ Notas de uso:
 | `GET`/`POST` | `/rotar` | Rota páginas 90°/180°/270° |
 | `GET`/`POST` | `/proteger` | Añade contraseña al PDF |
 | `GET`/`POST` | `/desproteger` | Quita la contraseña del PDF |
-| `GET`/`POST` | `/ocr` | Extrae texto de un PDF escaneado |
+| `GET`/`POST` | `/ocr` | Extrae texto de un PDF escaneado (`lang`: spa/eng/fra/deu/ita/por) |
 | `GET`/`POST` | `/marcar-agua` | Añade marca de agua de texto |
 | `GET`/`POST` | `/numerar` | Añade números de página |
 | `GET`/`POST` | `/pdf-a-excel` | PDF → XLSX |
@@ -506,8 +508,9 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 312 casos (una omisión: OCR, porque Tesseract no está disponible en
-este entorno local; en Docker se ejecuta y comprueba el texto extraído):
+Incluye 318 casos (dos omisiones: los tests reales de OCR en español e inglés,
+porque Tesseract no está disponible en este entorno local; en Docker y en CI se
+ejecutan y comprueban el texto extraído):
 
 | Fichero | Qué cubre |
 |---|---|
@@ -655,7 +658,8 @@ No. No hay registro, límites de uso ni marcas de agua. El único límite es de
 
 **¿Por qué la tarjeta de OCR dice «Requiere Tesseract»?**
 Porque el binario de Tesseract no está instalado. Instálalo con
-`tesseract-ocr tesseract-ocr-spa` o usa Docker.
+`tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng` (añade el paquete del idioma
+que vayas a usar) o usa Docker.
 
 **¿Cuál es la diferencia entre Optimizar y Comprimir?**
 Optimizar reescribe la estructura del PDF con pikepdf. Comprimir usa
@@ -693,7 +697,8 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 | Error | Causa | Solución |
 |---|---|---|
-| `Error: Requiere Tesseract` | Falta el OCR del sistema | Instala `tesseract-ocr tesseract-ocr-spa` o usa Docker |
+| `Error: Requiere Tesseract` | Falta el OCR del sistema | Instala `tesseract-ocr tesseract-ocr-spa tesseract-ocr-eng` o usa Docker |
+| `Falta el idioma '...' en Tesseract` | No está el paquete de datos del idioma elegido | Instala `tesseract-ocr-<codigo>` (por ejemplo `tesseract-ocr-fra`) |
 | Panel «Dependencias del sistema» en ámbar | Falta un motor externo | Sigue la pista del panel o usa Docker |
 | Windows muestra SmartScreen | El instalador no está firmado | Verifica el origen del artefacto; si confías en él, elige «Más información» → «Ejecutar de todos modos» |
 | macOS no abre la app | No está notarizada | Verifica el origen y permite la app en «Privacidad y seguridad» (o usa el `.zip`) |
@@ -713,6 +718,16 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 ---
 
 ## Changelog
+
+### v2.3.0 (OCR multiidioma)
+
+- **OCR multiidioma:** `/ocr` añade un selector con seis idiomas (español,
+  inglés, francés, alemán, italiano y portugués). El servidor valida el código
+  contra una lista de solo esos seis valores y explica qué paquete instalar
+  si falta el `traineddata`. La API local expone el parámetro `lang` y la CLI lo
+  pasa como opción. Sin dependencias Python nuevas: los idiomas son paquetes del
+  sistema. 6 tests nuevos (318 en total), incluido uno real en inglés.
+- Los instaladores de escritorio se regeneran como `2.3.0`.
 
 ### v2.2.0 (PDF a Markdown y cobertura)
 
@@ -942,7 +957,7 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas web | 29 (27 expuestas en la API local) |
 | Rutas HTTP | 40 de aplicación (41 reglas en `url_map`) |
 | Plantillas Jinja2 | 32 |
-| Tests | 312 (1 omitido en local) |
+| Tests | 318 (2 omitidos en local) |
 | Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15, versiones fijadas con `==` |
@@ -950,7 +965,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | Local, solo loopback, con token `0600` |
-| Versión actual | 2.2.0 |
+| Versión actual | 2.3.0 |
 
 ---
 

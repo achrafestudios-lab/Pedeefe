@@ -37,7 +37,7 @@ def catalog_payload():
             "files": spec["files"],
             "params": spec["params"],
         })
-    return {"ok": True, "version": "2.2.0", "count": len(tools), "tools": tools}
+    return {"ok": True, "version": "2.3.0", "count": len(tools), "tools": tools}
 
 
 class _CliTestCase(unittest.TestCase):
