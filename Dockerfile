@@ -1,13 +1,14 @@
 # Imagen base Python (slim) para Pedeefe (Flask monolítico).
 FROM python:3.12-slim
 
-# Dependencias del sistema: Poppler (pdftoppm) y Tesseract OCR (español).
+# Dependencias del sistema: Poppler (pdftoppm) y Tesseract OCR (español e inglés).
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         poppler-utils \
         ghostscript \
         tesseract-ocr \
         tesseract-ocr-spa \
+        tesseract-ocr-eng \
         libcairo2 \
         libpango-1.0-0 \
         libpangocairo-1.0-0 \
