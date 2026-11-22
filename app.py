@@ -21,6 +21,18 @@ import pikepdf
 #   macOS: brew install poppler
 from pdf2image import convert_from_path
 from PIL import Image
+
+# pytesseract requiere Tesseract OCR instalado en el sistema:
+#   Ubuntu/Debian: sudo apt install tesseract-ocr
+#   Fedora: sudo dnf install tesseract
+#   macOS: brew install tesseract
+import pytesseract
+
+# reportlab para generar la marca de agua como PDF
+from reportlab.pdfgen import canvas
+from reportlab.lib.colors import Color
+from reportlab.lib import colors
+
 # pdf2docx importa el nombre "fitz" de PyMuPDF 1.x y eso emite un aviso a
 # stdout; lo silenciamos para no romper el protocolo PEDEE_READY del escritorio.
 _stdout = sys.stdout
@@ -66,17 +78,6 @@ except Exception:  # pragma: no cover
     IncrementalPdfFileWriter = None
     pyhanko_signers = None
     PdfSignatureMetadata = None
-
-# pytesseract requiere Tesseract OCR instalado en el sistema:
-#   Ubuntu/Debian: sudo apt install tesseract-ocr
-#   Fedora: sudo dnf install tesseract
-#   macOS: brew install tesseract
-import pytesseract
-
-# reportlab para generar la marca de agua como PDF
-from reportlab.pdfgen import canvas
-from reportlab.lib.colors import Color
-from reportlab.lib import colors
 
 app = Flask(__name__)
 
