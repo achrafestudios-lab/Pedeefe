@@ -187,13 +187,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.4.1`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.4.2`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.4.1-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.4.1-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.4.1-mac-x64.dmg` / `Pedeefe-2.4.1-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.4.2-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.4.2-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.4.2-mac-x64.dmg` / `Pedeefe-2.4.2-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -221,7 +221,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.4.1-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.4.2-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -753,6 +753,16 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v2.4.2 (instaladores más ligeros y arranque más rápido)
+
+- **Instaladores más ligeros:** PyMuPDF pasa a `1.28.2` sin extras no usados
+  (onnxruntime, networkx, layout/4llm), y PyInstaller excluye módulos que la
+  app no necesita. Reducción medida frente a v2.4.1: Windows -25,3 %, Linux
+  -12,4 %, macOS -16,7 % a -18,1 %.
+- **Arranque más rápido en Windows:** el backend de escritorio pasa de onefile
+  a onedir, evitando la descompresión completa en cada inicio.
+- Seis instaladores regenerados (`2.4.2`).
+
 ### v2.4.1 (errores explícitos y corrección de scroll en escritorio)
 
 - **Errores explícitos:** cuando una acción falla de forma inesperada, Pedeefe
@@ -984,6 +994,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v2.3.1 | Logo de Pedeefe en el escritorio | Completada |
 | v2.4.0 | OCR a PDF buscable y limpiador de metadatos | Completada |
 | v2.4.1 | Errores explícitos y corrección de scroll en escritorio | Completada |
+| v2.4.2 | Instaladores más ligeros y arranque más rápido | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -1049,7 +1060,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | En el servidor local (loopback por defecto; `43210` publicado en Docker), con token `0600` |
-| Versión actual | 2.4.1 |
+| Versión actual | 2.4.2 |
 
 ---
 
