@@ -180,13 +180,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.3.0`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.3.1`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.3.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.3.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.3.0-mac-x64.dmg` / `Pedeefe-2.3.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.3.1-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.3.1-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.3.1-mac-x64.dmg` / `Pedeefe-2.3.1-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -214,7 +214,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.3.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.3.1-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -723,6 +723,18 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v2.3.1 (logo de Pedeefe en el escritorio)
+
+- **Icono de la app:** el ejecutable y el instalador de Windows, los accesos
+  directos y la ventana de escritorio muestran el logo retocado de Pedeefe en
+  lugar del icono genérico de Electron. Linux y macOS usan el mismo dibujo en
+  sus formatos (`icon.png` e `icon.icns`). Si ya tenías Pedeefe instalado,
+  descarga e instala esta versión para ver el icono nuevo.
+- **Marca web:** el favicon y el logo del README usan el mismo SVG retocado, y
+  los iconos de la PWA se regeneraron desde ese archivo. La caché del service
+  worker pasa a `pedeefe-v2.3.2-ui` para que se vea el cambio.
+- Seis instaladores regenerados (`2.3.1`) y 2 tests nuevos (320 en total).
+
 ### v2.3.0 (OCR multiidioma)
 
 - **OCR multiidioma:** `/ocr` añade un selector con seis idiomas (español,
@@ -913,6 +925,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v2.1.0 | Rediseño visual con marca Pedeefe | Completada |
 | v2.2.0 | PDF a Markdown y cobertura 91 % | Completada |
 | v2.3.0 | OCR multiidioma (6 idiomas) | Completada |
+| v2.3.1 | Logo de Pedeefe en el escritorio | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -973,7 +986,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | Local, solo loopback, con token `0600` |
-| Versión actual | 2.3.0 |
+| Versión actual | 2.3.1 |
 
 ---
 

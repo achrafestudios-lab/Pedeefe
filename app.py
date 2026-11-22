@@ -3195,7 +3195,7 @@ def api_tools():
         })
     return jsonify({
         "ok": True,
-        "version": "2.3.0",
+        "version": "2.3.1",
         "count": len(tools),
         "tools": tools,
     })
