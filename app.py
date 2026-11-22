@@ -2159,6 +2159,59 @@ def descargar_html(token):
         cleanup_folder(temp_dir)
 
 
+# ─── /pdf-a-markdown ─────────────────────────────────────────────────
+@app.route("/pdf-a-markdown", methods=["GET", "POST"])
+def pdf_a_markdown():
+    if request.method == "GET":
+        return render_template("pdf_a_markdown.html")
+
+    file = request.files.get("file")
+    if not file or file.filename == "":
+        return render_template("pdf_a_markdown.html", error="Selecciona un PDF para convertir.")
+    if not allowed_file(file.filename):
+        return render_template("pdf_a_markdown.html", error="El archivo seleccionado no es un PDF.")
+    size_error = validate_file_size(file, "pdf_a_markdown.html")
+    if size_error:
+        return size_error
+
+    temp_dir = _create_temp_dir()
+    try:
+        ext = file.filename.rsplit(".", 1)[1].lower() if "." in file.filename else ""
+        unique_name = f"{uuid.uuid4()}.{ext}"
+        filepath = os.path.join(temp_dir, unique_name)
+        file.save(filepath)
+        if not validate_pdf(filepath):
+            raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
+
+        reader = PdfReader(filepath)
+        sections = ["# Documento extraído", ""]
+        for number, page in enumerate(reader.pages, start=1):
+            text = (page.extract_text() or "").strip()
+            sections.append(f"## Página {number}")
+            sections.append("")
+            sections.append(text if text else "_(sin texto extraíble)_")
+            sections.append("")
+
+        output_path = os.path.join(temp_dir, "convertido.md")
+        with open(output_path, "w", encoding="utf-8") as handle:
+            handle.write("\n".join(sections).rstrip() + "\n")
+
+        return send_file(
+            output_path,
+            as_attachment=True,
+            download_name="convertido.md",
+            mimetype="text/markdown",
+        )
+    except Exception as e:
+        cleanup_folder(temp_dir)
+        return render_template(
+            "pdf_a_markdown.html",
+            error=_friendly_error("convertir el PDF a Markdown", e),
+        )
+    finally:
+        cleanup_folder(temp_dir)
+
+
 # ─── /word-a-pdf ─────────────────────────────────────────────────────
 @app.route("/word-a-pdf", methods=["GET", "POST"])
 def word_a_pdf():
@@ -2960,6 +3013,10 @@ API_TOOLS = {
     "pdf-a-html": {
         "label": "PDF a HTML", "endpoint": "pdf_a_html",
         "route": "/pdf-a-html", "files": [_api_file("file")], "params": [],
+    },
+    "pdf-a-markdown": {
+        "label": "PDF a Markdown", "endpoint": "pdf_a_markdown",
+        "route": "/pdf-a-markdown", "files": [_api_file("file")], "params": [],
     },
     "word-a-pdf": {
         "label": "Word a PDF", "endpoint": "word_a_pdf",

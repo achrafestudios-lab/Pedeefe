@@ -80,11 +80,12 @@ class TestApiCatalog(_ApiTestCase):
         payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
         self.assertTrue(payload["ok"])
         self.assertEqual(payload["version"], "2.1.0")
-        self.assertEqual(payload["count"], 26)
+        self.assertEqual(payload["count"], 27)
         slugs = [tool["slug"] for tool in payload["tools"]]
         self.assertEqual(len(slugs), len(set(slugs)))
         for expected in (
             "unir", "dividir", "comprimir", "ocr", "firmar", "comparar", "lotes",
+            "pdf-a-markdown",
         ):
             self.assertIn(expected, slugs)
         for tool in payload["tools"]:

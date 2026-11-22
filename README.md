@@ -79,7 +79,7 @@
 
 ## ¿Qué es Pedeefe?
 
-Pedeefe es una aplicación web que reúne **28 herramientas para trabajar con
+Pedeefe es una aplicación web que reúne **29 herramientas para trabajar con
 PDFs**: unir, dividir, recortar, reordenar, optimizar, comprimir, convertir,
 rotar, numerar, marcar con agua, proteger, firmar, censurar, comparar, extraer
 texto mediante OCR y ahorrar tiempo con lotes, historial local y plantillas.
@@ -91,7 +91,7 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 
 ### Características principales
 
-- 📄 **28 herramientas en un solo lugar.** Organización, conversión, edición,
+- 📄 **29 herramientas en un solo lugar.** Organización, conversión, edición,
   optimización, seguridad, análisis y productividad.
 - 🔒 **100 % local y privado.** Los archivos nunca salen del equipo; se eliminan
   al terminar la operación o tras la descarga.
@@ -112,7 +112,7 @@ El servidor Flask corre en `127.0.0.1:43210` por defecto (o en
 - 📲 **PWA instalable (v1.9).** Instala la web como una app más en tu equipo desde
   `127.0.0.1` o `localhost`. Guarda solo la cáscara para abrirla sin servidor;
   las herramientas siguen necesitando el backend local.
-- 🤖 **API y CLI local (v2.0).** Automatiza 26 herramientas de procesamiento desde
+- 🤖 **API y CLI local (v2.0).** Automatiza 27 herramientas de procesamiento desde
   scripts o la terminal, sobre el mismo backend de `127.0.0.1` y con un token
   local. No abre otro puerto ni duplica la lógica de PDF.
 - 🐳 **Lista para Docker.** Imagen con Poppler, Tesseract (español),
@@ -129,7 +129,7 @@ con Docker y abriendo `http://localhost:43210`.
 
 | Vista | Descripción |
 |---|---|
-| Portada | Rejilla con las 28 herramientas y navegación desplegable por grupos |
+| Portada | Rejilla con las 29 herramientas y navegación desplegable por grupos |
 | Herramienta | Formulario de subida, opciones, resultado y descarga |
 | Resultado | Enlace de descarga temporal por token UUID para conversiones largas |
 
@@ -432,6 +432,7 @@ Notas de uso:
 | `GET` | `/descargar_powerpoint/<token>` | Descarga el PPTX convertido |
 | `GET`/`POST` | `/pdf-a-html` | PDF → HTML |
 | `GET` | `/descargar_html/<token>` | Descarga el HTML convertido |
+| `GET`/`POST` | `/pdf-a-markdown` | PDF → Markdown (.md) |
 | `GET`/`POST` | `/word-a-pdf` | Word/HTML → PDF |
 | `GET`/`POST` | `/excel-a-pdf` | Excel/CSV → PDF |
 | `GET`/`POST` | `/powerpoint-a-pdf` | PowerPoint → PDF |
@@ -446,8 +447,8 @@ Notas de uso:
 | `GET` | `/api/v1/tools` | Catálogo de la API local (requiere token) |
 | `POST` | `/api/v1/tools/<slug>` | Ejecuta una herramienta y devuelve archivo o JSON (requiere token) |
 
-Los archivos estáticos se sirven desde `/static/`. En total son **39 rutas de
-aplicación**; `url_map` registra 40 porque Flask añade la regla de `/static/`.
+Los archivos estáticos se sirven desde `/static/`. En total son **40 rutas de
+aplicación**; `url_map` registra 41 porque Flask añade la regla de `/static/`.
 
 ---
 
@@ -505,7 +506,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 252 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 258 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno local; en Docker se ejecuta y comprueba el texto extraído):
 
 | Fichero | Qué cubre |
@@ -522,6 +523,7 @@ este entorno local; en Docker se ejecuta y comprueba el texto extraído):
 | `tests/test_api.py` | Token local, catálogo, ejecución de handlers y descargas por token desde la API |
 | `tests/test_cli.py` | Catálogo, reparto de archivos, parámetros, salida y errores del CLI |
 | `tests/test_hardening.py` | Temporales `0700`, limpieza con PDFs corruptos y descarga diferida |
+| `tests/test_markdown.py` | PDF → Markdown: texto extraído, errores y limpieza del temporal |
 
 Comprobaciones adicionales:
 
@@ -660,7 +662,7 @@ No. La PWA guarda solo la interfaz para abrirla y mostrar un aviso si el backend
 no está en marcha. Los PDF se procesan siempre en local con Flask.
 
 **¿Puedo automatizar Pedeefe desde un script?**
-Sí. Con el backend en marcha, usa `python cli/pedeefe.py list` para ver las 26
+Sí. Con el backend en marcha, usa `python cli/pedeefe.py list` para ver las 27
 herramientas disponibles y la API `POST /api/v1/tools/<slug>` desde cualquier
 lenguaje. Todo sigue en `127.0.0.1` y con el mismo token local.
 
@@ -698,6 +700,13 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 ---
 
 ## Changelog
+
+### Sin publicar (después de v2.1.0)
+
+- **PDF a Markdown:** nueva herramienta en «Convertir desde PDF» que extrae el
+  texto de cada página con `pypdf` y descarga un `convertido.md` editable, sin
+  dependencias nuevas ni servicios externos. También disponible en la API local
+  como `pdf-a-markdown`. 6 tests nuevos (258 en total). Aún sin tag ni release.
 
 ### v2.1.0 (rediseño visual)
 
@@ -868,8 +877,8 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
-opcional de *PDF Intelligence*: resumen con IA, traducción y exportación a
-Markdown.
+opcional de *PDF Intelligence*: resumen con IA y traducción. La exportación a
+Markdown ya está disponible con `pypdf`, sin dependencias nuevas.
 
 ---
 
@@ -885,7 +894,7 @@ Markdown.
 | Docker | Sí | No | No | No | Sí |
 | Conversiones Office | Sí | Sí | Sí | Sí | No |
 | API/CLI local | Sí | No | No | No | Sí |
-| 28 herramientas | Sí | Parcial | Parcial | Parcial | No |
+| 29 herramientas | Sí | Parcial | Parcial | Parcial | No |
 
 **Diferenciador clave:** Pedeefe es una caja de herramientas PDF en español,
 local y sin cuenta, con Docker listo y conversiones en ambos sentidos.
@@ -913,11 +922,11 @@ Pedeefe se construye sobre proyecto open source:
 
 | Métrica | Valor |
 |---|---|
-| Herramientas web | 28 (26 expuestas en la API local) |
-| Rutas HTTP | 39 de aplicación (40 reglas en `url_map`) |
-| Plantillas Jinja2 | 31 |
-| Tests | 252 (1 omitido en local) |
-| Líneas de `app.py` | ~3.080 |
+| Herramientas web | 29 (27 expuestas en la API local) |
+| Rutas HTTP | 40 de aplicación (41 reglas en `url_map`) |
+| Plantillas Jinja2 | 32 |
+| Tests | 258 (1 omitido en local) |
+| Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15 (sin cambios en v2.0) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |

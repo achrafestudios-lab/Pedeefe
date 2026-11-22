@@ -38,6 +38,7 @@ const APP_SHELL = [
     "/static/icons/tools/ocr.svg",
     "/static/icons/tools/pdf_a_excel.svg",
     "/static/icons/tools/pdf_a_html.svg",
+    "/static/icons/tools/pdf_a_markdown.svg",
     "/static/icons/tools/pdf_a_imagen.svg",
     "/static/icons/tools/pdf_a_powerpoint.svg",
     "/static/icons/tools/pdf_a_word.svg",

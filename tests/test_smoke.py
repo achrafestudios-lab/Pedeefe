@@ -64,7 +64,7 @@ class TempUploadMixin:
 
 
 class TestSmokeGetRoutes(TempUploadMixin, unittest.TestCase):
-    """13 GET de la app + CSS -> 200. [CONFIRMADO]"""
+    """14 GET de la app + CSS -> 200. [CONFIRMADO]"""
 
     ROUTES = [
         "/",
@@ -74,6 +74,7 @@ class TestSmokeGetRoutes(TempUploadMixin, unittest.TestCase):
         "/pdf-a-imagen",
         "/imagen-a-pdf",
         "/pdf-a-word",
+        "/pdf-a-markdown",
         "/rotar",
         "/proteger",
         "/desproteger",

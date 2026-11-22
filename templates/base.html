@@ -63,6 +63,7 @@
                                 <a href="{{ url_for('pdf_a_excel') }}" {% if request.endpoint == 'pdf_a_excel' %}aria-current="page"{% endif %}><span aria-hidden="true">📊</span> PDF a Excel</a>
                                 <a href="{{ url_for('pdf_a_powerpoint') }}" {% if request.endpoint == 'pdf_a_powerpoint' %}aria-current="page"{% endif %}><span aria-hidden="true">📽️</span> PDF a PowerPoint</a>
                                 <a href="{{ url_for('pdf_a_html') }}" {% if request.endpoint == 'pdf_a_html' %}aria-current="page"{% endif %}><span aria-hidden="true">🌐</span> PDF a HTML</a>
+                                <a href="{{ url_for('pdf_a_markdown') }}" {% if request.endpoint == 'pdf_a_markdown' %}aria-current="page"{% endif %}><span aria-hidden="true">📝</span> PDF a Markdown</a>
                             </li>
                             <li class="nav-column">
                                 <span class="nav-column-title">Editar PDF</span>
