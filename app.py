@@ -1,6 +1,7 @@
 import os
 import platform
 import re
+import sys
 import uuid
 import shutil
 import subprocess
@@ -20,7 +21,15 @@ import pikepdf
 #   macOS: brew install poppler
 from pdf2image import convert_from_path
 from PIL import Image
-from pdf2docx import Converter
+# pdf2docx importa el nombre "fitz" de PyMuPDF 1.x y eso emite un aviso a
+# stdout; lo silenciamos para no romper el protocolo PEDEE_READY del escritorio.
+_stdout = sys.stdout
+try:
+    sys.stdout = open(os.devnull, "w")
+    from pdf2docx import Converter
+finally:
+    sys.stdout.close()
+    sys.stdout = _stdout
 
 # Conversiones adicionales (Fase 4)
 try:

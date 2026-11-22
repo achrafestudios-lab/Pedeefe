@@ -1,13 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
-"""Especificación PyInstaller del backend de Pedeefe Desktop (v1.7).
+"""Especificación PyInstaller del backend de Pedeefe Desktop.
 
 Construir desde desktop/:
 
     .venv/bin/python -m PyInstaller --noconfirm --clean \
         --distpath backend-dist --workpath build pedeefe-backend.spec
 
-El ejecutable resultante se copia a resources/backend dentro del paquete
-Electron (ver package.json -> build.extraResources).
+Genera una carpeta onedir (backend-dist/pedeefe-backend/) que se copia a
+resources/backend dentro del paquete Electron (ver package.json -> build.extraResources).
 """
 
 from pathlib import Path
@@ -47,7 +47,17 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    excludes=[
+        "tkinter",
+        "test",
+        "unittest",
+        "pydoc",
+        "doctest",
+        "lib2to3",
+        "xmlrpc",
+        "ensurepip",
+        "venv",
+    ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
@@ -59,21 +69,28 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 exe = EXE(
     pyz,
     a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
     [],
+    exclude_binaries=True,
     name="pedeefe-backend",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    upx_exclude=[],
-    runtime_tmpdir=None,
     console=True,
     disable_windowed_traceback=False,
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
+)
+
+coll = COLLECT(
+    exe,
+    a.binaries,
+    a.zipfiles,
+    a.datas,
+    strip=False,
+    upx=False,
+    upx_exclude=[],
+    name="pedeefe-backend",
 )

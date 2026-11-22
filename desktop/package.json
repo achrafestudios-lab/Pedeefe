@@ -29,11 +29,8 @@
     ],
     "extraResources": [
       {
-        "from": "backend-dist",
-        "to": "backend",
-        "filter": [
-          "pedeefe-backend*"
-        ]
+        "from": "backend-dist/pedeefe-backend",
+        "to": "backend"
       },
       {
         "from": "../LICENSE",

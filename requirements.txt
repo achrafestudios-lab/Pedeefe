@@ -1,4 +1,4 @@
-# Versiones exactas verificadas por la suite (312 tests) y el CI.
+# Versiones exactas verificadas por la suite y el CI.
 # Para actualizar una: cambiar su línea, ejecutar `pip check` y la suite,
 # y comprobar que el CI sigue en verde. No se usan rangos `>=` para que una
 # salida futura no rompa la app sin avisar.
@@ -14,6 +14,6 @@ python-pptx==1.0.2
 python-docx==1.2.0
 openpyxl==3.1.5
 pdfplumber==0.11.10
-pymupdf==2.1
+pymupdf==1.28.2
 weasyprint==70.0
 pyHanko==0.38.2

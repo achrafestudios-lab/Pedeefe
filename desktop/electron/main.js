@@ -20,7 +20,11 @@ let shuttingDown = false;
 function backendCommand() {
   if (app.isPackaged) {
     const name = process.platform === 'win32' ? 'pedeefe-backend.exe' : 'pedeefe-backend';
-    const binary = path.join(process.resourcesPath, 'backend', name);
+    const candidates = [
+      path.join(process.resourcesPath, 'backend', name),
+      path.join(process.resourcesPath, 'backend', 'pedeefe-backend', name),
+    ];
+    const binary = candidates.find((candidate) => fs.existsSync(candidate)) || candidates[0];
     return { command: binary, args: [], cwd: path.dirname(binary) };
   }
   const python = process.platform === 'win32'
