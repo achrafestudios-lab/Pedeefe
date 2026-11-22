@@ -5,8 +5,8 @@ No requieren servidor ni puerto. Ejecutar:
 
     .venv/bin/python -m unittest discover -s tests -v
 
-Tesseract está ausente en el entorno local: /ocr se omite (skip). En Docker,
-con Tesseract y datos españoles, el mismo test se ejecuta y comprueba el texto.
+Tesseract está ausente en el entorno local: /ocr se omite (skip). El CI y Docker
+instalan Tesseract con datos españoles y ejecutan el mismo test con el motor real.
 """
 
 import io

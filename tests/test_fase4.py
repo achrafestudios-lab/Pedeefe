@@ -9,8 +9,8 @@ import io
 import logging
 import os
 import re
-import shutil
 import unittest
+from unittest.mock import patch
 
 from docx import Document
 from openpyxl import Workbook, load_workbook
@@ -316,16 +316,15 @@ class TestOfficeToPdfFase4(TempUploadMixin, unittest.TestCase):
             with self.subTest(route=route):
                 assert_legible_error(self, self.client.post(route, data={}))
 
-    @unittest.skipIf(
-        shutil.which("soffice") or shutil.which("libreoffice"),
-        "Con LibreOffice instalado los formatos heredados sí se convierten",
-    )
     def test_legacy_format_without_libreoffice_has_clear_message(self):
-        resp = self.client.post(
-            "/word-a-pdf",
-            data={"file": (io.BytesIO(b"antiguo"), "a.doc")},
-            content_type="multipart/form-data",
-        )
+        # Se simula la ausencia del motor para que el caso se ejecute siempre,
+        # también en el CI donde LibreOffice sí está instalado.
+        with patch.object(app_module.shutil, "which", return_value=None):
+            resp = self.client.post(
+                "/word-a-pdf",
+                data={"file": (io.BytesIO(b"antiguo"), "a.doc")},
+                content_type="multipart/form-data",
+            )
         assert_legible_error(self, resp)
         self.assertIn("LibreOffice", body_of(resp))
 

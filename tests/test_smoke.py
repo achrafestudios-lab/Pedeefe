@@ -8,7 +8,8 @@ Convenciones:
 - Cada caso documenta si es [CONFIRMADO] (medido) o [INFERIDO].
 - Las pruebas destructivas de C-01 usan UPLOAD_FOLDER temporal en el directorio
   del sistema y monkeypatchean ``cleanup_folder`` para no borrar nada.
-- Tesseract está ausente en este entorno: /ocr no se prueba aquí.
+- Tesseract está ausente en este entorno: /ocr se omite aquí; el CI lo ejecuta
+  con el motor real.
 """
 
 import io
