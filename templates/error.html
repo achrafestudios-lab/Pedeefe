@@ -7,6 +7,22 @@
 <section class="error-page">
     <h1><span aria-hidden="true">⚠️</span> Error</h1>
     <p>{{ message }}</p>
-    <a href="{{ url_for('index') }}" class="btn btn-primary">Volver al inicio</a>
+    {% if cause %}
+    <div class="alert alert-error" role="alert" style="margin-top:1rem; text-align:left;">
+        <strong>Causa probable:</strong> {{ cause }}
+    </div>
+    {% endif %}
+    {% if fix %}
+    <div class="alert alert-warning" role="status" style="margin-top:0.75rem; text-align:left;">
+        <strong>Cómo solucionarlo:</strong> {{ fix }}
+    </div>
+    {% endif %}
+    {% if detail %}
+    <details style="margin-top:1rem; text-align:left;">
+        <summary>Detalle técnico (para compartir con soporte)</summary>
+        <pre style="margin-top:0.75rem; white-space:pre-wrap; word-break:break-word; font-size:0.85rem;">{{ detail }}</pre>
+    </details>
+    {% endif %}
+    <a href="{{ url_for('index') }}" class="btn btn-primary" style="margin-top:1rem;">Volver al inicio</a>
 </section>
 {% endblock %}

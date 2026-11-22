@@ -28,7 +28,7 @@
   <img src="https://img.shields.io/badge/python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/docker-listo-2496ED?style=for-the-badge&logo=docker&logoColor=white" alt="Docker">
   <img src="https://img.shields.io/badge/escritorio-multiplataforma-6B4EFF?style=for-the-badge&logo=electron&logoColor=white" alt="Escritorio">
-  <img src="https://img.shields.io/badge/tests-345%20passed-brightgreen?style=for-the-badge" alt="Tests">
+  <img src="https://img.shields.io/badge/tests-347%20passed-brightgreen?style=for-the-badge" alt="Tests">
   <img src="https://img.shields.io/badge/local-sin%20servidor-58e99e?style=for-the-badge" alt="Local">
   <img src="https://img.shields.io/badge/puerto-43210-orange?style=for-the-badge" alt="Puerto">
 </p>
@@ -187,13 +187,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.4.0`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.4.1`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.4.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.4.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.4.0-mac-x64.dmg` / `Pedeefe-2.4.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.4.1-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.4.1-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.4.1-mac-x64.dmg` / `Pedeefe-2.4.1-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -221,7 +221,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.4.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.4.1-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -525,7 +525,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 345 casos (dos omisiones: los tests reales de OCR en español e inglés,
+Incluye 347 casos (dos omisiones: los tests reales de OCR en español e inglés,
 porque Tesseract no está disponible en este entorno local; en Docker y en CI se
 ejecutan y comprueban el texto extraído):
 
@@ -753,6 +753,19 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
+### v2.4.1 (errores explícitos y corrección de scroll en escritorio)
+
+- **Errores explícitos:** cuando una acción falla de forma inesperada, Pedeefe
+  muestra la causa probable, cómo solucionarlo y el detalle técnico plegado
+  para compartirlo. Los errores también se guardan en `pedeefe-error.log`
+  dentro de la carpeta de datos de la app.
+- **Escritorio Windows:** este diagnóstico ayuda a identificar por qué una
+  herramienta devuelve error interno en el paquete de escritorio.
+- **Scroll lateral:** se eliminó el desbordamiento horizontal de la interfaz
+  (`overflow-x: clip` en `html/body`), que podía aparecer en la ventana de
+  escritorio.
+- Seis instaladores regenerados (`2.4.1`).
+
 ### v2.4.0 (OCR a PDF buscable y limpiador de metadatos)
 
 - **OCR a PDF buscable:** `/ocr-a-pdf` añade una capa de texto invisible sobre
@@ -970,6 +983,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v2.3.0 | OCR multiidioma (6 idiomas) | Completada |
 | v2.3.1 | Logo de Pedeefe en el escritorio | Completada |
 | v2.4.0 | OCR a PDF buscable y limpiador de metadatos | Completada |
+| v2.4.1 | Errores explícitos y corrección de scroll en escritorio | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -1027,7 +1041,7 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas web | 31 (29 expuestas en la API local) |
 | Rutas HTTP | 44 de aplicación (45 reglas en `url_map`) |
 | Plantillas Jinja2 | 34 |
-| Tests | 345 (2 omitidos en local) |
+| Tests | 347 (2 omitidos en local) |
 | Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15, versiones fijadas con `==` |
@@ -1035,7 +1049,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | En el servidor local (loopback por defecto; `43210` publicado en Docker), con token `0600` |
-| Versión actual | 2.4.0 |
+| Versión actual | 2.4.1 |
 
 ---
 

@@ -6,9 +6,11 @@ import shutil
 import subprocess
 import zipfile
 import difflib
+import traceback
 from io import BytesIO
 from html import unescape
 from flask import Flask, render_template, request, send_file, jsonify, make_response, Response
+from werkzeug.exceptions import HTTPException
 from local_token import get_or_create_api_token
 from pypdf import PdfReader, PdfWriter
 import pikepdf
@@ -320,6 +322,87 @@ REFERER_TO_TEMPLATE = {
 }
 
 
+def _describe_unexpected_error(exc):
+    """Devuelve causa y solución orientativas para errores no controlados."""
+    msg = str(exc)
+    low = msg.lower()
+    exc_type = type(exc).__name__
+
+    if isinstance(exc, PermissionError) or "permission denied" in low:
+        return (
+            "El sistema no permitió leer o escribir un archivo temporal.",
+            "Comprueba que la carpeta de datos de Pedeefe tenga permisos de escritura. "
+            "Si usas la app de escritorio, cierra otras instancias y vuelve a intentarlo. "
+            "En Windows, revisa que el antivirus no esté bloqueando la carpeta de la app.",
+        )
+    if isinstance(exc, FileNotFoundError) or "no such file or directory" in low:
+        return (
+            "Falta un archivo o una herramienta externa necesaria para completar la acción.",
+            "Si la herramienta usa PDF a imagen, OCR, compresión real u Office, instala la "
+            "dependencia indicada (Poppler, Tesseract, Ghostscript o LibreOffice) y reinicia Pedeefe.",
+        )
+    if "tesseract" in low:
+        return (
+            "Tesseract OCR no está disponible o falló al procesar el archivo.",
+            "Instala Tesseract y el idioma necesario. En la app de escritorio, instala Tesseract en el "
+            "sistema y reinicia Pedeefe.",
+        )
+    if "poppler" in low or "pdftoppm" in low or "pdfinfo" in low:
+        return (
+            "Poppler no está disponible o falló al convertir el PDF.",
+            "Instala Poppler y reinicia Pedeefe. En Windows, añade la carpeta bin de Poppler al PATH.",
+        )
+    if "ghostscript" in low or low.strip() == "gs" or "gswin" in low:
+        return (
+            "Ghostscript no está disponible o falló al comprimir el PDF.",
+            "Instala Ghostscript y reinicia Pedeefe.",
+        )
+    if "libreoffice" in low or "soffice" in low:
+        return (
+            "LibreOffice no está disponible o falló al convertir el documento.",
+            "Instala LibreOffice y reinicia Pedeefe.",
+        )
+    if isinstance(exc, MemoryError) or "memory" in low:
+        return (
+            "El archivo agotó la memoria disponible durante el procesamiento.",
+            "Prueba con un archivo más pequeño, divide el PDF antes de procesarlo o cierra otras aplicaciones.",
+        )
+    if isinstance(exc, TimeoutError) or "timed out" in low or "timeout" in low:
+        return (
+            "La operación tardó demasiado y se detuvo.",
+            "Prueba con un archivo más pequeño o con menos páginas. Si es una conversión compleja, inténtalo de nuevo.",
+        )
+    return (
+        f"Se produjo un error inesperado ({exc_type}).",
+        "Vuelve a intentarlo. Si se repite, comparte el detalle técnico de abajo para poder diagnosticarlo.",
+    )
+
+
+def _log_unexpected_error(exc):
+    """Guarda el traceback en el directorio de uploads para diagnóstico local."""
+    detail = "".join(
+        traceback.format_exception(type(exc), exc, exc.__traceback__)
+    )
+    stamp = __import__("datetime").datetime.now().isoformat(timespec="seconds")
+    try:
+        req_info = f"{request.method} {request.path}"
+    except Exception:
+        req_info = "<sin contexto de petición>"
+    payload = (
+        f"[{stamp}] {req_info}\n"
+        f"{detail}\n{'-' * 60}\n"
+    )
+    try:
+        os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+        log_path = os.path.join(UPLOAD_FOLDER, "pedeefe-error.log")
+        with open(log_path, "a", encoding="utf-8") as fh:
+            fh.write(payload)
+    except Exception:
+        pass
+    print(payload, flush=True)
+    return detail
+
+
 @app.errorhandler(413)
 def too_large(e):
     """Cuando un archivo supera los 50 MB, devuelve el error en la página de origen."""
@@ -331,6 +414,49 @@ def too_large(e):
                 error="El archivo supera el límite de 50 MB. Selecciona un archivo más pequeño."
             ), 413
     return render_template("error.html", message="El archivo supera el límite de 50 MB."), 413
+
+
+@app.errorhandler(Exception)
+def handle_unexpected_error(exc):
+    """Muestra errores no controlados con causa y solución para el usuario."""
+    if isinstance(exc, HTTPException):
+        return exc
+
+    detail = _log_unexpected_error(exc)
+    cause, fix = _describe_unexpected_error(exc)
+    message = f"No se pudo completar la acción: {exc}"
+
+    try:
+        is_api = request.path.startswith("/api/")
+    except Exception:
+        is_api = False
+    if is_api:
+        return jsonify({
+            "ok": False,
+            "error": message,
+            "cause": cause,
+            "fix": fix,
+            "detail": detail,
+        }), 500
+
+    try:
+        return render_template(
+            "error.html",
+            message=message,
+            cause=cause,
+            fix=fix,
+            detail=detail,
+        ), 500
+    except Exception:
+        # Si la plantilla falla, devolvemos HTML simple para no perder el diagnóstico.
+        body = (
+            "<!doctype html><html lang='es'><head><meta charset='utf-8'>"
+            "<title>Error - Pedeefe</title></head><body style='font-family:sans-serif;padding:24px;'>"
+            f"<h1>Error</h1><p>{message}</p><p><strong>Causa:</strong> {cause}</p>"
+            f"<p><strong>Cómo solucionarlo:</strong> {fix}</p>"
+            f"<pre style='white-space:pre-wrap'>{detail}</pre></body></html>"
+        )
+        return body, 500, {"Content-Type": "text/html; charset=utf-8"}
 
 
 # ─── Página principal ───────────────────────────────────────────────
@@ -3485,7 +3611,7 @@ def api_tools():
         })
     return jsonify({
         "ok": True,
-        "version": "2.4.0",
+        "version": "2.4.1",
         "count": len(tools),
         "tools": tools,
     })
@@ -3504,7 +3630,15 @@ def api_run_tool(slug):
             web_response = app.view_functions[spec["endpoint"]]()
         return _api_convert_response(web_response, slug)
     except Exception as exc:  # pragma: no cover — mensaje accionable al cliente
-        return jsonify({"ok": False, "error": str(exc)}), 500
+        detail = _log_unexpected_error(exc)
+        cause, fix = _describe_unexpected_error(exc)
+        return jsonify({
+            "ok": False,
+            "error": str(exc),
+            "cause": cause,
+            "fix": fix,
+            "detail": detail,
+        }), 500
 
 
 if __name__ == "__main__":

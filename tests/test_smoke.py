@@ -19,6 +19,7 @@ import sys
 import tempfile
 import unittest
 import uuid
+from unittest import mock
 
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
@@ -288,6 +289,32 @@ class TestErrorState(TempUploadMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
         self.assertIn("Selecciona un PDF", body)
+
+    def test_unhandled_exception_shows_explicit_error(self):
+        with mock.patch.object(app_module, "_create_temp_dir", side_effect=RuntimeError("boom")):
+            data = {"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "angle": "90"}
+            resp = self.client.post("/rotar", data=data, content_type="multipart/form-data")
+        self.assertEqual(resp.status_code, 500)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("Causa probable", body)
+        self.assertIn("Cómo solucionarlo", body)
+        self.assertIn("Detalle técnico", body)
+        self.assertIn("boom", body)
+
+    def test_unhandled_exception_api_returns_json(self):
+        with mock.patch.object(app_module, "_create_temp_dir", side_effect=RuntimeError("boom")):
+            resp = self.client.post(
+                "/api/v1/tools/rotar",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "angle": "90"},
+                headers={"Authorization": f"Bearer {app_module.get_or_create_api_token()}"},
+                content_type="multipart/form-data",
+            )
+        self.assertEqual(resp.status_code, 500)
+        payload = resp.get_json()
+        self.assertFalse(payload["ok"])
+        self.assertIn("cause", payload)
+        self.assertIn("fix", payload)
+        self.assertIn("boom", payload["error"])
 
 
 class TestRepoUploadsEmpty(unittest.TestCase):
