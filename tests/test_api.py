@@ -79,7 +79,7 @@ class TestApiCatalog(_ApiTestCase):
     def test_catalog_lists_all_processing_tools(self):
         payload = self.client.get("/api/v1/tools", headers=self.headers).get_json()
         self.assertTrue(payload["ok"])
-        self.assertEqual(payload["version"], "2.1.0")
+        self.assertEqual(payload["version"], "2.2.0")
         self.assertEqual(payload["count"], 27)
         slugs = [tool["slug"] for tool in payload["tools"]]
         self.assertEqual(len(slugs), len(set(slugs)))

@@ -176,13 +176,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.1.0`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.2.0`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.1.0-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.1.0-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.1.0-mac-x64.dmg` / `Pedeefe-2.1.0-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.2.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.2.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.2.0-mac-x64.dmg` / `Pedeefe-2.2.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -210,7 +210,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.1.0-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.2.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -714,15 +714,16 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
-### Sin publicar (después de v2.1.0)
+### v2.2.0 (PDF a Markdown y cobertura)
 
 - **PDF a Markdown:** nueva herramienta en «Convertir desde PDF» que extrae el
   texto de cada página con `pypdf` y descarga un `convertido.md` editable, sin
   dependencias nuevas ni servicios externos. También disponible en la API local
-  como `pdf-a-markdown`. 6 tests nuevos (258 en total). Aún sin tag ni release.
+  como `pdf-a-markdown`. 6 tests nuevos (258 en total).
 - **Cobertura:** 54 tests nuevos en `tests/test_coverage.py` (312 en total) para
   las ramas con valor funcional; `app.py` pasa del 83 % al 90 % y `local_token.py`
   al 100 % (total 91 %). Sin cambios en dependencias ni en el comportamiento.
+- Los instaladores de escritorio se regeneran como `2.2.0`.
 
 ### v2.1.0 (rediseño visual)
 
@@ -949,7 +950,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | Local, solo loopback, con token `0600` |
-| Versión actual | 2.1.0 |
+| Versión actual | 2.2.0 |
 
 ---
 
