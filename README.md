@@ -945,7 +945,7 @@ Pedeefe se construye sobre proyecto open source:
 | Tests | 312 (1 omitido en local) |
 | Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
-| Dependencias Python | 15 (sin cambios en v2.0) |
+| Dependencias Python | 15, versiones fijadas con `==` |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |

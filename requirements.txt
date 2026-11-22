@@ -1,15 +1,19 @@
-Flask>=3.0
-pypdf>=4.0,<8
-pikepdf>=8.0
-pdf2docx>=0.5.0
-pdf2image>=1.16
-Pillow>=10.0
-pytesseract>=0.3.10
-reportlab>=4.0
-python-pptx>=0.6.21
-python-docx>=1.0
-openpyxl>=3.1
-pdfplumber>=0.10
-pymupdf>=1.23
-weasyprint>=60.0
-pyhanko>=0.38,<0.39
+# Versiones exactas verificadas por la suite (312 tests) y el CI.
+# Para actualizar una: cambiar su línea, ejecutar `pip check` y la suite,
+# y comprobar que el CI sigue en verde. No se usan rangos `>=` para que una
+# salida futura no rompa la app sin avisar.
+Flask==3.1.3
+pypdf==6.21.4
+pikepdf==10.17.0
+pdf2docx==0.5.13
+pdf2image==1.17.0
+Pillow==13.0.0
+pytesseract==0.3.13
+reportlab==5.1.0
+python-pptx==1.0.2
+python-docx==1.2.0
+openpyxl==3.1.5
+pdfplumber==0.11.10
+pymupdf==2.1
+weasyprint==70.0
+pyHanko==0.38.2
