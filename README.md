@@ -187,13 +187,13 @@ La ventana de escritorio usa el mismo backend Flask en `127.0.0.1`, pero con un
 puerto efímero y un directorio de temporales propio dentro del perfil de la
 aplicación. No hay navegador visible, cuenta, telemetría ni llamadas externas.
 Hay instaladores para **Linux, Windows y macOS**; ninguno expone la app a la red.
-Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.3.1`).
+Descárgalos desde la [pestaña Releases](https://github.com/achrafestudios-lab/Pedeefe/releases/latest) (`2.4.0`).
 
 | Sistema | Artefacto |
 |---|---|
-| Linux | `Pedeefe-2.3.1-linux-x86_64.AppImage` |
-| Windows | `Pedeefe-2.3.1-win-x64.exe` (NSIS) |
-| macOS | `Pedeefe-2.3.1-mac-x64.dmg` / `Pedeefe-2.3.1-mac-arm64.dmg` (y `.zip`) |
+| Linux | `Pedeefe-2.4.0-linux-x86_64.AppImage` |
+| Windows | `Pedeefe-2.4.0-win-x64.exe` (NSIS) |
+| macOS | `Pedeefe-2.4.0-mac-x64.dmg` / `Pedeefe-2.4.0-mac-arm64.dmg` (y `.zip`) |
 
 Los binarios no están firmados: Windows puede mostrar SmartScreen y macOS
 Gatekeeper puede pedir abrir la app desde «Privacidad y seguridad». Las
@@ -221,7 +221,7 @@ extracción integrado:
 
 ```bash
 cd desktop
-APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.3.1-linux-x86_64.AppImage
+APPIMAGE_EXTRACT_AND_RUN=1 ./dist/Pedeefe-2.4.0-linux-x86_64.AppImage
 ```
 
 Para probar sin empaquetar, ejecuta `npm start` desde `desktop/` (usa el `.venv`
@@ -753,7 +753,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 
 ## Changelog
 
-### Sin publicar (oleada 2)
+### v2.4.0 (OCR a PDF buscable y limpiador de metadatos)
 
 - **OCR a PDF buscable:** `/ocr-a-pdf` añade una capa de texto invisible sobre
   el PDF original usando Tesseract y Poppler, con el mismo allowlist de seis
@@ -764,6 +764,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
   cifrado se rechaza con un mensaje accionable.
 - Ambos están en la portada, el menú, la API local y el CLI. La caché de la PWA
   pasa a `pedeefe-v2.3.3-ui` para incluir sus iconos.
+- Seis instaladores regenerados (`2.4.0`) y 25 tests nuevos (345 en total).
 
 ### v2.3.1 (logo de Pedeefe en el escritorio)
 
@@ -968,6 +969,7 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
 | v2.2.0 | PDF a Markdown y cobertura 91 % | Completada |
 | v2.3.0 | OCR multiidioma (6 idiomas) | Completada |
 | v2.3.1 | Logo de Pedeefe en el escritorio | Completada |
+| v2.4.0 | OCR a PDF buscable y limpiador de metadatos | Completada |
 
 v2.0 añade una API JSON y un CLI para automatizar las herramientas desde el
 propio equipo, con token local y sin abrir puertos ni guardar archivos. Línea
@@ -1033,7 +1035,7 @@ Pedeefe se construye sobre proyecto open source:
 | Plataformas de escritorio | Linux, Windows y macOS |
 | PWA | Instalable en contextos seguros, sin caché de archivos |
 | API/CLI | En el servidor local (loopback por defecto; `43210` publicado en Docker), con token `0600` |
-| Versión actual | 2.3.1 |
+| Versión actual | 2.4.0 |
 
 ---
 

@@ -2,7 +2,7 @@
   "name": "pedeefe-desktop",
   "productName": "Pedeefe",
   "desktopName": "Pedeefe",
-  "version": "2.3.1",
+  "version": "2.4.0",
   "private": true,
   "description": "Pedeefe de escritorio: caja de herramientas PDF local",
   "main": "electron/main.js",
