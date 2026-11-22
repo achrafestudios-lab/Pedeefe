@@ -506,7 +506,7 @@ Ambas vistas ofrecen borrar una entrada o todo el conjunto.
 .venv/bin/python -m unittest discover -s tests
 ```
 
-Incluye 258 casos (una omisión: OCR, porque Tesseract no está disponible en
+Incluye 312 casos (una omisión: OCR, porque Tesseract no está disponible en
 este entorno local; en Docker se ejecuta y comprueba el texto extraído):
 
 | Fichero | Qué cubre |
@@ -524,6 +524,19 @@ este entorno local; en Docker se ejecuta y comprueba el texto extraído):
 | `tests/test_cli.py` | Catálogo, reparto de archivos, parámetros, salida y errores del CLI |
 | `tests/test_hardening.py` | Temporales `0700`, limpieza con PDFs corruptos y descarga diferida |
 | `tests/test_markdown.py` | PDF → Markdown: texto extraído, errores y limpieza del temporal |
+| `tests/test_coverage.py` | Ramas con valor: helpers, errores legibles, opciones, conversiones y token local |
+
+La cobertura de `app.py` y `local_token.py` se mide con `coverage` instalado solo
+en el entorno virtual (no es dependencia de la aplicación):
+
+```bash
+COVERAGE_FILE=/tmp/pedeefe.coverage .venv/bin/python -m coverage run -m unittest discover -s tests
+COVERAGE_FILE=/tmp/pedeefe.coverage .venv/bin/python -m coverage report --include='*/app.py,*/local_token.py'
+```
+
+Resultado actual: **91 %** (`app.py` 90 %, `local_token.py` 100 %). No se usa
+`--source` porque `pikepdf` provoca un error `nanobind` al instrumentar todas las
+dependencias; el filtro `--include` mide únicamente el código propio.
 
 Comprobaciones adicionales:
 
@@ -707,6 +720,9 @@ Usa *Desproteger PDF* con la contraseña antes de aplicar otras operaciones.
   texto de cada página con `pypdf` y descarga un `convertido.md` editable, sin
   dependencias nuevas ni servicios externos. También disponible en la API local
   como `pdf-a-markdown`. 6 tests nuevos (258 en total). Aún sin tag ni release.
+- **Cobertura:** 54 tests nuevos en `tests/test_coverage.py` (312 en total) para
+  las ramas con valor funcional; `app.py` pasa del 83 % al 90 % y `local_token.py`
+  al 100 % (total 91 %). Sin cambios en dependencias ni en el comportamiento.
 
 ### v2.1.0 (rediseño visual)
 
@@ -925,7 +941,8 @@ Pedeefe se construye sobre proyecto open source:
 | Herramientas web | 29 (27 expuestas en la API local) |
 | Rutas HTTP | 40 de aplicación (41 reglas en `url_map`) |
 | Plantillas Jinja2 | 32 |
-| Tests | 258 (1 omitido en local) |
+| Tests | 312 (1 omitido en local) |
+| Cobertura | 91 % (`app.py` 90 %, `local_token.py` 100 %) |
 | Líneas de `app.py` | ~3.200 |
 | Dependencias Python | 15 (sin cambios en v2.0) |
 | Puerto por defecto | 43210 (web) / efímero (escritorio) |
