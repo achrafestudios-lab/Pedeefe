@@ -8,7 +8,7 @@ import zipfile
 import difflib
 from io import BytesIO
 from html import unescape
-from flask import Flask, render_template, request, send_file, abort, jsonify, make_response, Response
+from flask import Flask, render_template, request, send_file, jsonify, make_response, Response
 from local_token import get_or_create_api_token
 from pypdf import PdfReader, PdfWriter
 import pikepdf
@@ -1021,7 +1021,6 @@ def pdf_a_word():
         return render_template(
             "pdf_a_word.html",
             success=True,
-            download_path=output_path,
             download_token=os.path.basename(temp_dir),
             warning_scanned=(not has_text) or is_likely_scanned
         )
