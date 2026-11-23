@@ -215,6 +215,28 @@ def cleanup_folder(folder_path):
         shutil.rmtree(target)
 
 
+def _send_file_and_cleanup(path, download_name, temp_dir, mimetype=None):
+    """Lee un archivo, limpia la carpeta temporal y lo envía en memoria.
+
+    Evita WinError 32 en Windows: send_file con ruta mantiene el archivo
+    abierto y shutil.rmtree falla si se ejecuta antes de cerrar el handle.
+    """
+    try:
+        with open(path, "rb") as fh:
+            data = fh.read()
+    finally:
+        cleanup_folder(temp_dir)
+    kwargs = {
+        "as_attachment": True,
+        "download_name": download_name,
+    }
+    if mimetype:
+        kwargs["mimetype"] = mimetype
+    response = send_file(BytesIO(data), **kwargs)
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 def _valid_download_token(token):
     """Valida que el token sea un UUID canónico (defensa frente a C-01)."""
     if not isinstance(token, str) or not token:
@@ -566,7 +588,7 @@ def unir():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="unido.pdf")
+        return _send_file_and_cleanup(output_path, "unido.pdf", temp_dir)
 
     except Exception as e:
         return render_template("unir.html", error=f"Error al unir: {str(e)}")
@@ -632,7 +654,7 @@ def dividir():
                         writer.write(f)
                     zip_file.write(page_path, f"pagina_{i + 1}.pdf")
 
-            return send_file(zip_path, as_attachment=True, download_name="paginas.zip")
+            return _send_file_and_cleanup(zip_path, "paginas.zip", temp_dir)
 
         elif mode == "rango":
             # Dividir por rango de páginas indicado por el usuario
@@ -691,7 +713,7 @@ def dividir():
             with open(output_path, "wb") as f:
                 writer.write(f)
 
-            return send_file(output_path, as_attachment=True, download_name="rango_extraido.pdf")
+            return _send_file_and_cleanup(output_path, "rango_extraido.pdf", temp_dir)
 
         else:
             return render_template("dividir.html", error="Selecciona un modo de división.",
@@ -796,10 +818,7 @@ def descargar_comprimido(token):
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
 
-    try:
-        return send_file(output_path, as_attachment=True, download_name="comprimido.pdf")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "comprimido.pdf", temp_dir)
 
 
 # ─── Comprimir PDF real (Ghostscript) ────────────────────────────
@@ -967,10 +986,8 @@ def pdf_a_imagen():
         if total_pages == 1:
             # Una sola página: descargar la imagen directamente
             image_name = f"pagina_1.{format_choice}"
-            return send_file(
-                image_files[0][1],
-                as_attachment=True,
-                download_name=image_name
+            return _send_file_and_cleanup(
+                image_files[0][1], image_name, temp_dir
             )
         else:
             # Varias páginas: comprimir en zip
@@ -979,7 +996,7 @@ def pdf_a_imagen():
                 for name, path in image_files:
                     zip_file.write(path, name)
 
-            return send_file(zip_path, as_attachment=True, download_name="imagenes.zip")
+            return _send_file_and_cleanup(zip_path, "imagenes.zip", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1095,7 +1112,7 @@ def imagen_a_pdf():
                 output_path, "PDF", save_all=True, append_images=pdf_images[1:]
             )
 
-        return send_file(output_path, as_attachment=True, download_name="imagenes.pdf")
+        return _send_file_and_cleanup(output_path, "imagenes.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1185,10 +1202,7 @@ def descargar_word(token):
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
 
-    try:
-        return send_file(output_path, as_attachment=True, download_name="convertido.docx")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "convertido.docx", temp_dir)
 
 
 # ─── Rotar PDF ──────────────────────────────────────────────────────
@@ -1247,7 +1261,7 @@ def rotar():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="rotado.pdf")
+        return _send_file_and_cleanup(output_path, "rotado.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1313,7 +1327,7 @@ def proteger():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="protegido.pdf")
+        return _send_file_and_cleanup(output_path, "protegido.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1389,7 +1403,7 @@ def desproteger():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="desprotegido.pdf")
+        return _send_file_and_cleanup(output_path, "desprotegido.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1488,7 +1502,7 @@ def ocr():
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(full_text)
 
-        return send_file(output_path, as_attachment=True, download_name="texto_extraido.txt")
+        return _send_file_and_cleanup(output_path, "texto_extraido.txt", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1610,10 +1624,7 @@ def descargar_ocr_pdf(token):
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
 
-    try:
-        return send_file(output_path, as_attachment=True, download_name="buscable.pdf")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "buscable.pdf", temp_dir)
 
 
 # ─── Limpieza de metadatos (sanitize) ─────────────────────────────────
@@ -1759,12 +1770,7 @@ def descargar_limpiar_metadatos(token):
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
 
-    try:
-        return send_file(
-            output_path, as_attachment=True, download_name="sin_metadatos.pdf"
-        )
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "sin_metadatos.pdf", temp_dir)
 
 
 # ─── Marca de agua en PDF ─────────────────────────────────────────────
@@ -1865,7 +1871,7 @@ def marcar_agua():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="marcado.pdf")
+        return _send_file_and_cleanup(output_path, "marcado.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -1983,7 +1989,7 @@ def numerar():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="numerado.pdf")
+        return _send_file_and_cleanup(output_path, "numerado.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -2098,7 +2104,7 @@ def recortar_pdf():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="recortado.pdf")
+        return _send_file_and_cleanup(output_path, "recortado.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -2171,7 +2177,7 @@ def reordenar_pdf():
         with open(output_path, "wb") as f:
             writer.write(f)
 
-        return send_file(output_path, as_attachment=True, download_name="reordenado.pdf")
+        return _send_file_and_cleanup(output_path, "reordenado.pdf", temp_dir)
 
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -2456,10 +2462,7 @@ def descargar_excel(token):
     output_path = os.path.join(temp_dir, "convertido.xlsx")
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
-    try:
-        return send_file(output_path, as_attachment=True, download_name="convertido.xlsx")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "convertido.xlsx", temp_dir)
 
 
 # ─── /pdf-a-powerpoint ──────────────────────────────────────────────
@@ -2523,10 +2526,7 @@ def descargar_powerpoint(token):
     output_path = os.path.join(temp_dir, "convertido.pptx")
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
-    try:
-        return send_file(output_path, as_attachment=True, download_name="convertido.pptx")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "convertido.pptx", temp_dir)
 
 
 # ─── /pdf-a-html ─────────────────────────────────────────────────────
@@ -2595,10 +2595,7 @@ def descargar_html(token):
     output_path = os.path.join(temp_dir, "convertido.html")
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
-    try:
-        return send_file(output_path, as_attachment=True, download_name="convertido.html")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "convertido.html", temp_dir)
 
 
 # ─── /pdf-a-markdown ─────────────────────────────────────────────────
@@ -2638,11 +2635,8 @@ def pdf_a_markdown():
         with open(output_path, "w", encoding="utf-8") as handle:
             handle.write("\n".join(sections).rstrip() + "\n")
 
-        return send_file(
-            output_path,
-            as_attachment=True,
-            download_name="convertido.md",
-            mimetype="text/markdown",
+        return _send_file_and_cleanup(
+            output_path, "convertido.md", temp_dir, mimetype="text/markdown"
         )
     except Exception as e:
         cleanup_folder(temp_dir)
@@ -2875,10 +2869,7 @@ def descargar_pdf_convertido(token):
     output_path = os.path.join(temp_dir, "convertido.pdf")
     if not os.path.exists(output_path):
         return render_template("error.html", message="El archivo ya no está disponible."), 404
-    try:
-        return send_file(output_path, as_attachment=True, download_name="convertido.pdf")
-    finally:
-        cleanup_folder(temp_dir)
+    return _send_file_and_cleanup(output_path, "convertido.pdf", temp_dir)
 
 
 # ─── v1.4 · Firma, censura y comparación ──────────────────────────────
@@ -2957,7 +2948,7 @@ def firmar():
         output_path = os.path.join(temp_dir, "firmado.pdf")
         with open(output_path, "wb") as dst:
             dst.write(signed.getvalue())
-        return send_file(output_path, as_attachment=True, download_name="firmado.pdf")
+        return _send_file_and_cleanup(output_path, "firmado.pdf", temp_dir)
     except Exception:
         return render_template(
             "firmar.html",
@@ -3025,7 +3016,7 @@ def censurar():
                 "censurar.html",
                 error="No se encontró ninguna coincidencia. Revisa los términos escritos.",
             )
-        return send_file(output_path, as_attachment=True, download_name="censurado.pdf")
+        return _send_file_and_cleanup(output_path, "censurado.pdf", temp_dir)
     except Exception:
         return render_template(
             "censurar.html",
@@ -3336,8 +3327,8 @@ def lotes():
                     )
                 archive.write(target, arcname=output_name)
 
-        return send_file(
-            zip_path, as_attachment=True, download_name=f"lote_{operation}.zip"
+        return _send_file_and_cleanup(
+            zip_path, f"lote_{operation}.zip", temp_dir
         )
     except Exception:
         return _batch_page(
@@ -3621,7 +3612,7 @@ def api_tools():
         })
     return jsonify({
         "ok": True,
-        "version": "2.4.2",
+        "version": "2.4.3",
         "count": len(tools),
         "tools": tools,
     })
