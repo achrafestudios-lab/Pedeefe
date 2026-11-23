@@ -317,6 +317,77 @@ class TestErrorState(TempUploadMixin, unittest.TestCase):
         self.assertIn("boom", payload["error"])
 
 
+class TestSendFileAndCleanup(TempUploadMixin, unittest.TestCase):
+    """El archivo se lee en memoria antes de limpiar (fix WinError 32). [CONFIRMADO]"""
+
+    def test_send_file_and_cleanup_returns_data_and_removes_temp_dir(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "marcado.pdf")
+        with open(output_path, "wb") as fh:
+            fh.write(b"%PDF-1.4 contenido")
+
+        with app_module.app.test_request_context("/rotar"):
+            resp = app_module._send_file_and_cleanup(
+                output_path, "marcado.pdf", temp_dir, mimetype="application/pdf"
+            )
+            body = app_module._response_body(resp)
+
+        self.assertEqual(body, b"%PDF-1.4 contenido")
+        self.assertEqual(resp.headers["Content-Disposition"], "attachment; filename=marcado.pdf")
+        self.assertEqual(resp.headers["Cache-Control"], "no-store")
+        self.assertFalse(os.path.exists(temp_dir), "la carpeta temporal no se limpió")
+
+    def test_send_file_and_cleanup_cleans_even_if_read_fails(self):
+        temp_dir = app_module._create_temp_dir()
+        missing_path = os.path.join(temp_dir, "no_existe.pdf")
+
+        with self.assertRaises(FileNotFoundError):
+            app_module._send_file_and_cleanup(missing_path, "x.pdf", temp_dir)
+
+        self.assertFalse(os.path.exists(temp_dir), "la carpeta temporal no se limpió al fallar")
+
+    def test_cleanup_runs_while_original_path_still_open(self):
+        """Simula el bloqueo de Windows: limpiar con el archivo abierto no falla."""
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "marcado.pdf")
+        with open(output_path, "wb") as fh:
+            fh.write(b"%PDF-1.4 datos")
+
+        with open(output_path, "rb") as still_open:
+            self.assertEqual(still_open.read(), b"%PDF-1.4 datos")
+            with app_module.app.test_request_context("/marcar-agua"):
+                resp = app_module._send_file_and_cleanup(output_path, "marcado.pdf", temp_dir)
+                body = app_module._response_body(resp)
+
+        self.assertEqual(body, b"%PDF-1.4 datos")
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_real_tool_post_leaves_no_temp_folder(self):
+        """Una herramienta real (rotar) limpia su temporal y devuelve el PDF."""
+        before = set(os.listdir(self.uploads))
+        data = {"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf"), "angle": "90"}
+        resp = self.client.post("/rotar", data=data, content_type="multipart/form-data")
+
+        self.assertEqual(resp.status_code, 200)
+        self.assertTrue(resp.data.startswith(b"%PDF"), "no devolvió un PDF")
+        after = set(os.listdir(self.uploads))
+        self.assertEqual(after, before, f"quedaron temporales: {after - before}")
+
+    def test_all_tool_routes_use_memory_helper(self):
+        """Ninguna ruta envía un archivo por ruta (causa del WinError 32)."""
+        with open(
+            os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "app.py"),
+            encoding="utf-8",
+        ) as handle:
+            source = handle.read()
+        sends = [line.strip() for line in source.splitlines() if "send_file(" in line]
+        self.assertEqual(
+            sends,
+            ["response = send_file(BytesIO(data), **kwargs)"],
+            f"quedan envíos por ruta: {sends}",
+        )
+
+
 class TestRepoUploadsEmpty(unittest.TestCase):
     """uploads/ del repo queda vacio al terminar. [CONFIRMADO]"""
 
