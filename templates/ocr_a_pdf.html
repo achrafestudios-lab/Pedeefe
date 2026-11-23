@@ -22,6 +22,11 @@
     </div>
 
     {% if success %}
+    {% if warning %}
+    <div class="alert alert-warning" role="status" aria-live="polite">
+        {{ warning }}
+    </div>
+    {% endif %}
     <div class="result-box">
         <h2><span aria-hidden="true">✅</span> PDF buscable listo</h2>
         <p>Se ha añadido una capa de texto a {{ pages }} {{ 'página' if pages == 1 else 'páginas' }}.</p>

@@ -163,7 +163,9 @@ class TestPdfAExcelFase4(TempUploadMixin, unittest.TestCase):
         self.assertEqual(self.client.get("/descargar_excel/..").status_code, 404)
         self.assertEqual(self.client.get("/descargar_excel/%2e%2e").status_code, 404)
         self.assertEqual(self.client.get("/descargar_excel/no-es-uuid").status_code, 404)
-        self.assertEqual(self.client.get(f"/descargar_excel/{token}").status_code, 200)
+        download = self.client.get(f"/descargar_excel/{token}")
+        self.assertEqual(download.status_code, 200)
+        self.assertTrue(download.data)
         self.assertEqual(self.client.get(f"/descargar_excel/{token}").status_code, 404)
         self.assertEqual(os.listdir(self.uploads), [])
 

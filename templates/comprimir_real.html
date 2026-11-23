@@ -15,6 +15,11 @@
     {% endif %}
 
     {% if success %}
+        {% if fallback_used %}
+        <div class="alert alert-error" role="status" aria-live="polite">
+            {{ fallback_message }}
+        </div>
+        {% endif %}
         {% if already_optimized %}
         <div class="result-box">
             <h2>El archivo ya está optimizado</h2>

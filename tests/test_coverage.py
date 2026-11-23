@@ -8,6 +8,7 @@ externos: todo se ejecuta con el cliente de test de Flask.
 import io
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 import unittest
@@ -95,6 +96,26 @@ class TestInternalHelpers(unittest.TestCase):
             with patch.object(app_module, "UPLOAD_FOLDER", uploads):
                 app_module.cleanup_folder(outside)
             self.assertTrue(os.path.exists(os.path.join(outside, "archivo.txt")))
+
+    def test_cleanup_folder_retries_permission_error(self):
+        with tempfile.TemporaryDirectory() as root:
+            target = os.path.join(root, "temporal")
+            os.makedirs(target)
+            calls = {"n": 0}
+            real_rmtree = shutil.rmtree
+
+            def flaky(path):
+                calls["n"] += 1
+                if calls["n"] == 1:
+                    raise PermissionError("bloqueado")
+                return real_rmtree(path)
+
+            with patch.object(app_module, "UPLOAD_FOLDER", root), \
+                    patch.object(app_module.shutil, "rmtree", side_effect=flaky), \
+                    patch.object(app_module.time, "sleep"):
+                app_module.cleanup_folder(target)
+            self.assertFalse(os.path.exists(target))
+            self.assertEqual(calls["n"], 2)
 
     def test_cleanup_uploads_folder_removes_files_and_dirs(self):
         with tempfile.TemporaryDirectory() as root:
@@ -373,8 +394,8 @@ class TestLibreOfficeBranches(unittest.TestCase):
                 self.assertFalse(app_module._office_to_pdf_libreoffice(source, target))
 
 
-class TestGhostscriptErrorBranches(TempUploadMixin, unittest.TestCase):
-    """Los fallos de Ghostscript se convierten en mensajes legibles."""
+class TestGhostscriptFallbackBranches(TempUploadMixin, unittest.TestCase):
+    """Si Ghostscript falla, comprimir-real cae a compresión estructural."""
 
     def _post(self):
         return self.client.post(
@@ -383,42 +404,59 @@ class TestGhostscriptErrorBranches(TempUploadMixin, unittest.TestCase):
             content_type="multipart/form-data",
         )
 
-    def _assert_error(self, resp):
+    def _assert_fallback_success(self, resp, detail_fragment):
         self.assertEqual(resp.status_code, 200)
         body = resp.data.decode("utf-8", "replace")
         assert_no_traceback(self, body)
-        self.assertTrue(
-            "Error al comprimir" in body or "No se encontró Ghostscript" in body,
-            "falta un mensaje de error legible",
-        )
+        self.assertIn("compresión estructural como respaldo", body)
+        self.assertIn(detail_fragment, body)
+        match = TOKEN_RE.search(body)
+        self.assertIsNotNone(match, "falta token de descarga")
+        download = self.client.get(match.group(0))
+        self.assertEqual(download.status_code, 200)
+        self.assertTrue(download.data.startswith(b"%PDF"))
         self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 
-    def test_ghostscript_missing(self):
-        with patch.object(app_module.shutil, "which", return_value=None):
-            self._assert_error(self._post())
+    def _assert_error(self, resp, fragment="Error al comprimir"):
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        assert_no_traceback(self, body)
+        self.assertIn(fragment, body)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 
-    def test_called_process_error_with_stderr(self):
+    def test_ghostscript_missing_uses_pikepdf_fallback(self):
+        with patch.object(app_module.shutil, "which", return_value=None):
+            self._assert_fallback_success(self._post(), "No se encontró Ghostscript")
+
+    def test_called_process_error_with_stderr_uses_fallback(self):
         error = subprocess.CalledProcessError(1, ["gs"], stderr=b"fallo de gs")
         with patch.object(app_module.subprocess, "run", side_effect=error):
-            self._assert_error(self._post())
+            self._assert_fallback_success(self._post(), "fallo de gs")
 
-    def test_called_process_error_without_stderr(self):
+    def test_called_process_error_without_stderr_uses_fallback(self):
         error = subprocess.CalledProcessError(1, ["gs"], stderr=b"")
         with patch.object(app_module.subprocess, "run", side_effect=error):
-            self._assert_error(self._post())
+            self._assert_fallback_success(self._post(), "Ghostscript no pudo procesar el PDF")
 
-    def test_timeout(self):
+    def test_timeout_uses_fallback(self):
         error = subprocess.TimeoutExpired(["gs"], 120)
         with patch.object(app_module.subprocess, "run", side_effect=error):
-            self._assert_error(self._post())
+            self._assert_fallback_success(self._post(), "tardó demasiado")
 
-    def test_binary_disappears(self):
+    def test_binary_disappears_uses_fallback(self):
         with patch.object(app_module.subprocess, "run", side_effect=FileNotFoundError("gs")):
-            self._assert_error(self._post())
+            self._assert_fallback_success(self._post(), "gs")
 
-    def test_no_output_file(self):
+    def test_no_output_file_uses_fallback(self):
         with patch.object(app_module.subprocess, "run", return_value=MagicMock()):
-            self._assert_error(self._post())
+            self._assert_fallback_success(self._post(), "no se generó un archivo válido")
+
+    def test_fallback_failure_reports_both_errors(self):
+        error = subprocess.CalledProcessError(1, ["gs"], stderr=b"fallo de gs")
+        with patch.object(app_module.subprocess, "run", side_effect=error), \
+                patch.object(app_module.pikepdf, "open", side_effect=RuntimeError("pikepdf roto")):
+            resp = self._post()
+        self._assert_error(resp, "respaldo estructural también falló")
 
 
 class TestOcrBranches(TempUploadMixin, unittest.TestCase):
@@ -517,6 +555,7 @@ class TestNewToolsBranches(TempUploadMixin, unittest.TestCase):
         self.assertIsNotNone(match)
         download = self.client.get("/descargar_limpiar_metadatos/" + match.group(1))
         self.assertEqual(download.status_code, 200)
+        download.data  # consume para disparar limpieza del stream
         self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
         return download
 
@@ -806,6 +845,105 @@ class TestLocalToken(unittest.TestCase):
                 patch.object(local_token, "token_path", return_value="/no/escribible/token"), \
                 patch.object(local_token.os, "makedirs", side_effect=OSError("denegado")):
             self.assertTrue(local_token.get_or_create_api_token())
+
+
+class TestRobustnessFallbacks(TempUploadMixin, unittest.TestCase):
+    """Planes de respaldo y mensajes claros ante fallos."""
+
+    def test_describe_unexpected_error_permission(self):
+        cause, fix = app_module._describe_unexpected_error(PermissionError("denegado"))
+        self.assertIn("no permitió", cause)
+        self.assertIn("vuelve a intentarlo", fix)
+
+    def test_describe_unexpected_error_disk_full(self):
+        err = OSError(28, "No space left on device")
+        cause, fix = app_module._describe_unexpected_error(err)
+        self.assertIn("espacio suficiente", cause)
+        self.assertIn("Libera espacio", fix)
+
+    def test_cleanup_folder_gives_up_after_retries(self):
+        with tempfile.TemporaryDirectory() as root:
+            target = os.path.join(root, "temporal")
+            os.makedirs(target)
+            with patch.object(app_module, "UPLOAD_FOLDER", root), \
+                    patch.object(app_module.shutil, "rmtree", side_effect=PermissionError("bloqueado")), \
+                    patch.object(app_module.time, "sleep"):
+                app_module.cleanup_folder(target)
+            self.assertTrue(os.path.exists(target))
+            shutil.rmtree(target, ignore_errors=True)
+
+    def test_ocr_page_failure_falls_back_to_warning(self):
+        from PIL import Image
+
+        image = Image.new("RGB", (10, 10), color="white")
+        calls = {"n": 0}
+
+        def flaky_ocr(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("fallo puntual")
+            return "Texto ok"
+
+        with patch.object(app_module, "convert_from_path", return_value=[image, image]), \
+                patch.object(app_module.pytesseract, "image_to_string", side_effect=flaky_ocr):
+            resp = self.client.post(
+                "/ocr",
+                data={"file": (io.BytesIO(make_pdf_bytes(pages=2)), "ok.pdf")},
+                content_type="multipart/form-data",
+            )
+        self.assertEqual(resp.status_code, 200)
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("AVISO", body)
+        self.assertIn("Texto ok", body)
+        self.assertIn("No se pudo extraer texto de esta página", body)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_ocr_a_pdf_page_failure_keeps_page_without_text_layer(self):
+        from PIL import Image
+
+        image = Image.new("RGB", (10, 10), color="white")
+        calls = {"n": 0}
+
+        def flaky_pdf(*args, **kwargs):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise RuntimeError("fallo puntual")
+            return b"%PDF-1.4\n1 0 obj\n<<>>\nendobj\ntrailer\n<<>>\n%%EOF"
+
+        with patch.object(app_module, "convert_from_path", return_value=[image, image]), \
+                patch.object(app_module.pytesseract, "image_to_pdf_or_hocr", side_effect=flaky_pdf), \
+                patch.object(app_module, "_ocr_text_layer", return_value=io.BytesIO(make_pdf_bytes())):
+            resp = self.client.post(
+                "/ocr-a-pdf",
+                data={"file": (io.BytesIO(make_pdf_bytes(pages=2)), "ok.pdf")},
+                content_type="multipart/form-data",
+            )
+        body = resp.data.decode("utf-8", "replace")
+        self.assertEqual(resp.status_code, 200)
+        self.assertIn("No se pudo añadir capa de texto en 1 página(s)", body)
+        match = TOKEN_RE.search(body)
+        self.assertIsNotNone(match)
+        download = self.client.get(match.group(0))
+        self.assertEqual(download.status_code, 200)
+        self.assertTrue(download.data.startswith(b"%PDF"))
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
+
+    def test_ocr_systemic_tesseract_missing_not_swallowed(self):
+        from PIL import Image
+
+        image = Image.new("RGB", (10, 10), color="white")
+        with patch.object(app_module, "convert_from_path", return_value=[image]), \
+                patch.object(app_module.pytesseract, "image_to_string",
+                             side_effect=RuntimeError("tesseract is not installed")):
+            resp = self.client.post(
+                "/ocr",
+                data={"file": (io.BytesIO(make_pdf_bytes()), "ok.pdf")},
+                content_type="multipart/form-data",
+            )
+        body = resp.data.decode("utf-8", "replace")
+        self.assertIn("No se encontró Tesseract OCR", body)
+        self.assertNotIn("AVISO", body)
+        self.assertEqual(os.listdir(app_module.UPLOAD_FOLDER), [])
 
 
 if __name__ == "__main__":

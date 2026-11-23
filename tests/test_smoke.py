@@ -183,6 +183,7 @@ class TestValidDownloadUUID(TempUploadMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         cd = resp.headers.get("Content-Disposition", "")
         self.assertIn("comprimido.pdf", cd)
+        self.assertTrue(resp.data)
         self.assertFalse(os.path.exists(folder), "La carpeta temporal no se limpio")
 
     def test_descargar_word_valid_uuid_200(self):
@@ -196,6 +197,7 @@ class TestValidDownloadUUID(TempUploadMixin, unittest.TestCase):
         self.assertEqual(resp.status_code, 200)
         cd = resp.headers.get("Content-Disposition", "")
         self.assertIn("convertido.docx", cd)
+        self.assertTrue(resp.data)
         self.assertFalse(os.path.exists(folder), "La carpeta temporal no se limpio")
 
 
@@ -318,7 +320,7 @@ class TestErrorState(TempUploadMixin, unittest.TestCase):
 
 
 class TestSendFileAndCleanup(TempUploadMixin, unittest.TestCase):
-    """El archivo se lee en memoria antes de limpiar (fix WinError 32). [CONFIRMADO]"""
+    """El archivo se envía en streaming y se limpia al cerrar el handle (WinError 32)."""
 
     def test_send_file_and_cleanup_returns_data_and_removes_temp_dir(self):
         temp_dir = app_module._create_temp_dir()
@@ -383,9 +385,114 @@ class TestSendFileAndCleanup(TempUploadMixin, unittest.TestCase):
         sends = [line.strip() for line in source.splitlines() if "send_file(" in line]
         self.assertEqual(
             sends,
-            ["response = send_file(BytesIO(data), **kwargs)"],
-            f"quedan envíos por ruta: {sends}",
+            ["response = send_file(stream, **kwargs)"],
+            f"quedan envíos por ruta o no seguros: {sends}",
         )
+
+    def test_send_file_streams_with_passthrough_and_length(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.pdf")
+        payload = b"%PDF-1.4 " + (b"x" * 1024)
+        with open(output_path, "wb") as fh:
+            fh.write(payload)
+
+        with app_module.app.test_request_context("/rotar"):
+            resp = app_module._send_file_and_cleanup(output_path, "out.pdf", temp_dir)
+            self.assertTrue(resp.direct_passthrough)
+            self.assertNotIsInstance(resp.response, (bytes, bytearray, io.BytesIO))
+            self.assertEqual(resp.headers.get("Content-Length"), str(len(payload)))
+            body = app_module._response_body(resp)
+
+        self.assertEqual(body, payload)
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_send_file_cleanup_on_close_without_read(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"datos")
+
+        with app_module.app.test_request_context("/rotar"):
+            resp = app_module._send_file_and_cleanup(output_path, "out.bin", temp_dir)
+            resp.close()
+
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_send_file_cleanup_on_iteration_exhaustion(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"abc123")
+
+        with app_module.app.test_request_context("/rotar"):
+            resp = app_module._send_file_and_cleanup(output_path, "out.bin", temp_dir)
+            chunks = list(resp.response)
+            resp.close()
+
+        self.assertEqual(b"".join(chunks), b"abc123")
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_cleanup_stream_closes_handle_before_rmtree(self):
+        """Protege el fix WinError 32: cerrar handle antes de borrar carpeta."""
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"datos")
+
+        fh = open(output_path, "rb")
+        events = []
+        real_cleanup = app_module.cleanup_folder
+
+        def tracked_cleanup(path):
+            events.append(("cleanup", fh.closed, path))
+            return real_cleanup(path)
+
+        stream = app_module._CleanupStream(fh, temp_dir)
+        with mock.patch.object(app_module, "cleanup_folder", side_effect=tracked_cleanup):
+            stream.close()
+
+        self.assertTrue(fh.closed)
+        self.assertEqual(events, [("cleanup", True, temp_dir)])
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_cleanup_stream_is_idempotent(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"datos")
+        fh = open(output_path, "rb")
+        stream = app_module._CleanupStream(fh, temp_dir)
+        with mock.patch.object(app_module, "cleanup_folder", wraps=app_module.cleanup_folder) as cleanup:
+            stream.close()
+            stream.close()
+        self.assertEqual(cleanup.call_count, 1)
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_send_file_cleanup_after_partial_read_then_close(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"abcdef")
+
+        fh = open(output_path, "rb")
+        stream = app_module._CleanupStream(fh, temp_dir)
+        self.assertEqual(stream.read(3), b"abc")
+        stream.close()
+
+        self.assertFalse(os.path.exists(temp_dir))
+
+    def test_cleanup_on_read_to_eof(self):
+        temp_dir = app_module._create_temp_dir()
+        output_path = os.path.join(temp_dir, "out.bin")
+        with open(output_path, "wb") as fh:
+            fh.write(b"abc")
+
+        fh = open(output_path, "rb")
+        stream = app_module._CleanupStream(fh, temp_dir)
+        self.assertEqual(stream.read(), b"abc")
+        self.assertEqual(stream.read(), b"")
+        self.assertFalse(os.path.exists(temp_dir))
+        stream.close()
 
 
 class TestRepoUploadsEmpty(unittest.TestCase):

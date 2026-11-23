@@ -4,6 +4,7 @@ import re
 import uuid
 import shutil
 import subprocess
+import time
 import zipfile
 import difflib
 import traceback
@@ -281,6 +282,7 @@ def cleanup_folder(folder_path):
 
     Solo actúa si la ruta resuelta queda dentro de UPLOAD_FOLDER, para evitar
     borrar contenido fuera del directorio de subidas (defensa frente a C-01).
+    Reintenta brevemente en Windows para tolerar handles que se cierran tarde.
     """
     try:
         base = os.path.realpath(UPLOAD_FOLDER)
@@ -289,28 +291,130 @@ def cleanup_folder(folder_path):
         return
     if target == base or not target.startswith(base + os.sep):
         return
-    if os.path.exists(target):
-        shutil.rmtree(target)
+    if not os.path.exists(target):
+        return
+    for attempt in range(3):
+        try:
+            shutil.rmtree(target)
+            return
+        except FileNotFoundError:
+            return
+        except PermissionError:
+            if attempt == 2:
+                return
+            time.sleep(0.05 * (attempt + 1))
+        except OSError:
+            if attempt == 2:
+                return
+            time.sleep(0.05 * (attempt + 1))
+
+
+class _CleanupStream:
+    """Envuelve un archivo abierto y limpia la carpeta temporal al cerrar.
+
+    El cierre del handle ocurre antes de rmtree, evitando WinError 32 en
+    Windows. La limpieza es idempotente y también se dispara al agotar el
+    stream, porque algunos clientes (p. ej. el test client) no cierran siempre
+    el iterable de forma explícita.
+    """
+
+    def __init__(self, fh, temp_dir):
+        self._fh = fh
+        self._temp_dir = temp_dir
+        self._cleaned = False
+
+    def _cleanup(self):
+        if self._cleaned:
+            return
+        try:
+            if not self._fh.closed:
+                self._fh.close()
+        finally:
+            self._cleaned = True
+            cleanup_folder(self._temp_dir)
+
+    def __iter__(self):
+        try:
+            while True:
+                chunk = self._fh.read(8192)
+                if not chunk:
+                    break
+                yield chunk
+        finally:
+            self._cleanup()
+
+    def read(self, size=-1):
+        data = self._fh.read(size)
+        if data == b"" and not self._cleaned:
+            # EOF: ya no hace falta mantener el handle abierto.
+            self._cleanup()
+        return data
+
+    def readline(self, size=-1):
+        line = self._fh.readline(size)
+        if line == b"" and not self._cleaned:
+            self._cleanup()
+        return line
+
+    def readlines(self, hint=-1):
+        lines = self._fh.readlines(hint)
+        if not self._cleaned:
+            try:
+                pos = self._fh.tell()
+                self._fh.seek(0, os.SEEK_END)
+                end = self._fh.tell()
+                self._fh.seek(pos)
+                if pos >= end:
+                    self._cleanup()
+            except Exception:
+                pass
+        return lines
+
+    def seek(self, offset, whence=0):
+        return self._fh.seek(offset, whence)
+
+    def tell(self):
+        return self._fh.tell()
+
+    def readable(self):
+        return True
+
+    def seekable(self):
+        return True
+
+    @property
+    def closed(self):
+        return self._fh.closed
+
+    def close(self):
+        self._cleanup()
 
 
 def _send_file_and_cleanup(path, download_name, temp_dir, mimetype=None):
-    """Lee un archivo, limpia la carpeta temporal y lo envía en memoria.
+    """Envía un archivo en streaming y limpia la carpeta temporal al cerrar.
 
-    Evita WinError 32 en Windows: send_file con ruta mantiene el archivo
-    abierto y shutil.rmtree falla si se ejecuta antes de cerrar el handle.
+    Evita WinError 32 en Windows: el handle del archivo se cierra antes de
+    ejecutar shutil.rmtree sobre la carpeta temporal.
     """
     try:
-        with open(path, "rb") as fh:
-            data = fh.read()
-    finally:
+        fh = open(path, "rb")
+    except Exception:
         cleanup_folder(temp_dir)
+        raise
+    try:
+        length = os.fstat(fh.fileno()).st_size
+    except Exception:
+        length = None
+    stream = _CleanupStream(fh, temp_dir)
     kwargs = {
         "as_attachment": True,
         "download_name": download_name,
     }
     if mimetype:
         kwargs["mimetype"] = mimetype
-    response = send_file(BytesIO(data), **kwargs)
+    response = send_file(stream, **kwargs)
+    if length is not None:
+        response.headers["Content-Length"] = str(length)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -481,6 +585,18 @@ def _describe_unexpected_error(exc):
         return (
             "La operación tardó demasiado y se detuvo.",
             "Prueba con un archivo más pequeño o con menos páginas. Si es una conversión compleja, inténtalo de nuevo.",
+        )
+    if isinstance(exc, PermissionError) or "permission denied" in low:
+        return (
+            "El sistema no permitió acceder a un archivo temporal.",
+            "Cierra otros programas que puedan estar usando el archivo y vuelve a intentarlo.",
+        )
+    if isinstance(exc, OSError) and (
+        "no space left" in low or "disk full" in low or getattr(exc, "errno", None) == 28
+    ):
+        return (
+            "No hay espacio suficiente en el disco para completar la operación.",
+            "Libera espacio en disco e inténtalo de nuevo con un archivo más pequeño.",
         )
     return (
         f"Se produjo un error inesperado ({exc_type}).",
@@ -936,47 +1052,66 @@ def comprimir_real():
 
         original_size = os.path.getsize(filepath)
 
-        # Comprimir con Ghostscript (pdfwrite, preset ebook)
-        gs_bin = shutil.which("gs")
-        if not gs_bin:
-            return render_template(
-                "comprimir_real.html",
-                error=f"No se encontró Ghostscript en el sistema. {DEPENDENCIES['ghostscript']['hint']}"
-            )
-
         output_path = os.path.join(temp_dir, "comprimido.pdf")
-        try:
-            subprocess.run(
-                [
-                    gs_bin,
-                    "-sDEVICE=pdfwrite",
-                    "-dCompatibilityLevel=1.4",
-                    "-dPDFSETTINGS=/ebook",
-                    "-dNOPAUSE",
-                    "-dQUIET",
-                    "-dBATCH",
-                    f"-sOutputFile={output_path}",
-                    filepath,
-                ],
-                check=True,
-                capture_output=True,
-                timeout=120,
-            )
-        except subprocess.CalledProcessError as e:
-            err_msg = (e.stderr or b"").decode("utf-8", "replace").strip()
-            if not err_msg:
-                err_msg = "Ghostscript no pudo procesar el PDF."
-            return render_template("comprimir_real.html", error=f"Error al comprimir: {err_msg}")
-        except subprocess.TimeoutExpired:
-            return render_template("comprimir_real.html", error="Error al comprimir: el proceso tardó demasiado.")
-        except FileNotFoundError:
-            return render_template(
-                "comprimir_real.html",
-                error=f"No se encontró Ghostscript en el sistema. {DEPENDENCIES['ghostscript']['hint']}"
-            )
+        gs_bin = shutil.which("gs")
+        gs_error = None
 
-        if not os.path.exists(output_path):
-            return render_template("comprimir_real.html", error="Error al comprimir: no se generó el archivo de salida.")
+        def _pikepdf_fallback():
+            with pikepdf.open(filepath) as pdf:
+                pdf.save(output_path)
+
+        if not gs_bin:
+            gs_error = f"No se encontró Ghostscript. {DEPENDENCIES['ghostscript']['hint']}"
+        else:
+            try:
+                subprocess.run(
+                    [
+                        gs_bin,
+                        "-sDEVICE=pdfwrite",
+                        "-dCompatibilityLevel=1.4",
+                        "-dPDFSETTINGS=/ebook",
+                        "-dNOPAUSE",
+                        "-dQUIET",
+                        "-dBATCH",
+                        f"-sOutputFile={output_path}",
+                        filepath,
+                    ],
+                    check=True,
+                    capture_output=True,
+                    timeout=EXTERNAL_TIMEOUT,
+                )
+            except subprocess.CalledProcessError as e:
+                err_msg = (e.stderr or b"").decode("utf-8", "replace").strip()
+                gs_error = err_msg or "Ghostscript no pudo procesar el PDF."
+            except subprocess.TimeoutExpired:
+                gs_error = "Ghostscript tardó demasiado en responder."
+            except Exception as e:
+                gs_error = str(e) or "Ghostscript no pudo procesar el PDF."
+
+        fallback_used = False
+        fallback_message = None
+        if gs_error or not os.path.exists(output_path) or os.path.getsize(output_path) == 0:
+            if os.path.exists(output_path):
+                try:
+                    os.remove(output_path)
+                except OSError:
+                    pass
+            try:
+                _pikepdf_fallback()
+                fallback_used = True
+                fallback_message = (
+                    "No se pudo usar Ghostscript; se aplicó compresión estructural como respaldo. "
+                    f"Detalle: {gs_error or 'no se generó un archivo válido.'}"
+                )
+            except Exception as fallback_exc:
+                detail = gs_error or "no se generó un archivo válido"
+                return render_template(
+                    "comprimir_real.html",
+                    error=(
+                        f"Error al comprimir: {detail}. "
+                        f"El respaldo estructural también falló: {_friendly_error('comprimir el PDF', fallback_exc)}"
+                    ),
+                )
 
         compressed_size = os.path.getsize(output_path)
 
@@ -998,6 +1133,8 @@ def comprimir_real():
             reduction=round(reduction, 1),
             download_token=os.path.basename(temp_dir),
             already_optimized=already_optimized,
+            fallback_used=fallback_used,
+            fallback_message=fallback_message,
         )
 
     except Exception as e:
@@ -1590,6 +1727,7 @@ def ocr():
         # Convertir y OCR en lotes para acotar memoria.
         reader = PdfReader(filepath)
         all_text = []
+        page_errors = []
         chunk_size = 10
         for start in range(1, len(reader.pages) + 1, chunk_size):
             end = min(start + chunk_size - 1, len(reader.pages))
@@ -1600,19 +1738,39 @@ def ocr():
                 last_page=end,
                 timeout=EXTERNAL_TIMEOUT,
             )
-            for offset, image in enumerate(images):
-                page_num = start + offset
-                text = pytesseract.image_to_string(
-                    image, lang=lang, timeout=EXTERNAL_TIMEOUT
-                )
-                all_text.append(f"--- Página {page_num} ---\n{text}")
-            for image in images:
-                try:
-                    image.close()
-                except Exception:
-                    pass
+            try:
+                for offset, image in enumerate(images):
+                    page_num = start + offset
+                    try:
+                        text = pytesseract.image_to_string(
+                            image, lang=lang, timeout=EXTERNAL_TIMEOUT
+                        )
+                        all_text.append(f"--- Página {page_num} ---\n{text}")
+                    except Exception as page_exc:
+                        msg = _ocr_error_message(page_exc, lang)
+                        low = msg.lower()
+                        if "falta el idioma" in low or "no se encontró tesseract" in low or "poppler" in low:
+                            raise
+                        page_errors.append(page_num)
+                        all_text.append(
+                            f"--- Página {page_num} ---\n"
+                            f"[No se pudo extraer texto de esta página: {msg}]"
+                        )
+            finally:
+                for image in images:
+                    try:
+                        image.close()
+                    except Exception:
+                        pass
 
         full_text = "\n\n".join(all_text)
+        if page_errors:
+            aviso = (
+                "AVISO: No se pudo procesar completamente "
+                f"{len(page_errors)} página(s): {', '.join(map(str, page_errors))}.\n"
+                "El resto del texto se extrajo con normalidad.\n\n"
+            )
+            full_text = aviso + full_text
 
         # Guardar en un archivo .txt
         output_path = os.path.join(temp_dir, "texto_extraido.txt")
@@ -1698,6 +1856,7 @@ def ocr_a_pdf():
         reader = PdfReader(filepath)
         total_pages = len(reader.pages)
         writer = PdfWriter()
+        page_errors = []
         chunk_size = 10
         for start in range(1, total_pages + 1, chunk_size):
             end = min(start + chunk_size - 1, total_pages)
@@ -1708,31 +1867,48 @@ def ocr_a_pdf():
                 last_page=end,
                 timeout=EXTERNAL_TIMEOUT,
             )
-            for offset, image in enumerate(images):
-                page_idx = start - 1 + offset
-                layer_bytes = pytesseract.image_to_pdf_or_hocr(
-                    image, lang=lang, extension="pdf", timeout=EXTERNAL_TIMEOUT
-                )
-                layer = PdfReader(_ocr_text_layer(layer_bytes))
-                # pypdf 7 exige añadir la página antes de superponer (ver /marcar-agua).
-                writer.add_page(reader.pages[page_idx])
-                writer.pages[-1].merge_page(layer.pages[0])
-            for image in images:
-                try:
-                    image.close()
-                except Exception:
-                    pass
+            try:
+                for offset, image in enumerate(images):
+                    page_idx = start - 1 + offset
+                    try:
+                        layer_bytes = pytesseract.image_to_pdf_or_hocr(
+                            image, lang=lang, extension="pdf", timeout=EXTERNAL_TIMEOUT
+                        )
+                        layer = PdfReader(_ocr_text_layer(layer_bytes))
+                        # pypdf 7 exige añadir la página antes de superponer (ver /marcar-agua).
+                        writer.add_page(reader.pages[page_idx])
+                        writer.pages[-1].merge_page(layer.pages[0])
+                    except Exception as page_exc:
+                        msg = _ocr_error_message(page_exc, lang)
+                        low = msg.lower()
+                        if "falta el idioma" in low or "no se encontró tesseract" in low or "poppler" in low:
+                            raise
+                        writer.add_page(reader.pages[page_idx])
+                        page_errors.append(page_idx + 1)
+            finally:
+                for image in images:
+                    try:
+                        image.close()
+                    except Exception:
+                        pass
 
         output_path = os.path.join(temp_dir, "buscable.pdf")
         with open(output_path, "wb") as handle:
             writer.write(handle)
 
+        warning = None
+        if page_errors:
+            warning = (
+                f"No se pudo añadir capa de texto en {len(page_errors)} página(s): "
+                f"{', '.join(map(str, page_errors))}. Se conservaron esas páginas sin texto seleccionable."
+            )
         keep_temp = True
         return render_template(
             "ocr_a_pdf.html",
             success=True,
             pages=total_pages,
             download_token=os.path.basename(temp_dir),
+            warning=warning,
         )
 
     except Exception as e:
