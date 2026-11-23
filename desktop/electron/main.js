@@ -67,6 +67,7 @@ function createWindow() {
 
   // Solo se permite navegar dentro del propio backend local.
   mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (url.startsWith('file://')) return;
     if (!baseURL || !url.startsWith(baseURL)) event.preventDefault();
   });
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
@@ -76,7 +77,10 @@ function createWindow() {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
-  mainWindow.loadURL(baseURL);
+
+  const target = baseURL || path.join(__dirname, 'loading.html');
+  if (baseURL) mainWindow.loadURL(target);
+  else mainWindow.loadFile(target);
 }
 
 function startBackend() {
@@ -93,6 +97,7 @@ function startBackend() {
   delete env.PORT;
 
   backend = spawn(command, args, { cwd, env, stdio: ['ignore', 'pipe', 'pipe'] });
+  createWindow();
 
   let buffer = '';
   backend.stdout.on('data', (chunk) => {
@@ -105,16 +110,26 @@ function startBackend() {
       if (match && !baseURL) {
         baseURL = `http://127.0.0.1:${match[1]}`;
         clearTimeout(readyTimer);
-        createWindow();
+        if (mainWindow) mainWindow.loadURL(baseURL);
+        else createWindow();
       }
     }
   });
   backend.stderr.on('data', (chunk) => {
     console.error('[pedeefe-backend]', chunk.toString().trim());
   });
+  backend.on('error', (err) => {
+    if (!shuttingDown) {
+      shuttingDown = true;
+      clearTimeout(readyTimer);
+      dialog.showErrorBox('Pedeefe', `No se pudo iniciar el backend local: ${err.message}`);
+      app.quit();
+    }
+  });
   backend.on('exit', (code, signal) => {
     if (!shuttingDown) {
       shuttingDown = true;
+      clearTimeout(readyTimer);
       dialog.showErrorBox(
         'Pedeefe',
         `El backend local se detuvo (código ${code}, señal ${signal || 'ninguna'}).`,
@@ -124,7 +139,8 @@ function startBackend() {
   });
 
   readyTimer = setTimeout(() => {
-    if (!baseURL) {
+    if (!baseURL && !shuttingDown) {
+      shuttingDown = true;
       dialog.showErrorBox('Pedeefe', 'El backend local no respondió a tiempo.');
       app.quit();
     }

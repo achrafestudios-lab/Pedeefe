@@ -186,7 +186,7 @@ class TestApiExecution(_ApiTestCase):
             app_module, "convert_from_path", return_value=[Image.new("RGB", (20, 20))]
         ), patch.object(
             app_module.pytesseract, "image_to_pdf_or_hocr",
-            side_effect=lambda image, lang=None, extension=None:
+            side_effect=lambda image, lang=None, extension=None, **kwargs:
                 make_tesseract_layer_bytes(),
         ):
             response = self._post("ocr-a-pdf", {

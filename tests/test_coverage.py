@@ -451,7 +451,9 @@ class TestOcrBranches(TempUploadMixin, unittest.TestCase):
                 patch.object(app_module.pytesseract, "image_to_string",
                              return_value="Texto") as recognize:
             self._post()
-        recognize.assert_called_once_with(image, lang="spa")
+        recognize.assert_called_once_with(
+            image, lang="spa", timeout=app_module.EXTERNAL_TIMEOUT
+        )
 
     def test_selected_language_is_forwarded(self):
         from PIL import Image
@@ -466,7 +468,9 @@ class TestOcrBranches(TempUploadMixin, unittest.TestCase):
                 content_type="multipart/form-data",
             )
         self.assertEqual(resp.status_code, 200)
-        recognize.assert_called_once_with(image, lang="eng")
+        recognize.assert_called_once_with(
+            image, lang="eng", timeout=app_module.EXTERNAL_TIMEOUT
+        )
 
     def test_invalid_language_is_rejected(self):
         with patch.object(app_module.pytesseract, "image_to_string") as recognize:

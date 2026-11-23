@@ -1,7 +1,6 @@
 import os
 import platform
 import re
-import sys
 import uuid
 import shutil
 import subprocess
@@ -28,56 +27,135 @@ from PIL import Image
 #   macOS: brew install tesseract
 import pytesseract
 
-# reportlab para generar la marca de agua como PDF
-from reportlab.pdfgen import canvas
-from reportlab.lib.colors import Color
-from reportlab.lib import colors
+# Dependencias pesadas: se cargan bajo demanda para acelerar el arranque.
+# Los nombres de módulo se mantienen como atributos globales para que los
+# tests y las rutas los puedan parchear/consultar (app_module.fitz, etc.).
+EXTERNAL_TIMEOUT = 120  # segundos para Poppler/Tesseract y subprocesos
 
-# pdf2docx importa el nombre "fitz" de PyMuPDF 1.x y eso emite un aviso a
-# stdout; lo silenciamos para no romper el protocolo PEDEE_READY del escritorio.
-_stdout = sys.stdout
-try:
-    sys.stdout = open(os.devnull, "w")
-    from pdf2docx import Converter
-finally:
-    sys.stdout.close()
-    sys.stdout = _stdout
+Converter = None
+fitz = None
+pdfplumber = None
+Presentation = None
+Inches = None
+openpyxl = None
+WeasyHTML = None
+IncrementalPdfFileWriter = None
+pyhanko_signers = None
+PdfSignatureMetadata = None
 
-# Conversiones adicionales (Fase 4)
-try:
-    import pymupdf as fitz  # PyMuPDF (el alias "fitz" está obsoleto)
-except Exception:  # pragma: no cover — versiones antiguas solo exponen "fitz"
-    try:
-        import fitz
-    except Exception:
-        fitz = None
-try:
-    import pdfplumber
-except Exception:  # pragma: no cover
-    pdfplumber = None
-try:
-    from pptx import Presentation
-    from pptx.util import Inches
-except Exception:  # pragma: no cover
-    Presentation = None
-    Inches = None
-try:
-    import openpyxl
-except Exception:  # pragma: no cover
-    openpyxl = None
-try:
-    from weasyprint import HTML as WeasyHTML
-except Exception:  # pragma: no cover
-    WeasyHTML = None
-# Firma criptográfica (v1.4). Se degrada con un mensaje legible si falta.
-try:
-    from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
-    from pyhanko.sign import signers as pyhanko_signers
-    from pyhanko.sign.signers import PdfSignatureMetadata
-except Exception:  # pragma: no cover
-    IncrementalPdfFileWriter = None
-    pyhanko_signers = None
-    PdfSignatureMetadata = None
+_reportlab_canvas = None
+_reportlab_Color = None
+_reportlab_colors = None
+
+
+def _ensure_reportlab():
+    global _reportlab_canvas, _reportlab_Color, _reportlab_colors
+    if _reportlab_canvas is None:
+        from reportlab.pdfgen import canvas as _canvas
+        from reportlab.lib.colors import Color as _Color
+        from reportlab.lib import colors as _colors
+
+        _reportlab_canvas = _canvas
+        _reportlab_Color = _Color
+        _reportlab_colors = _colors
+    return _reportlab_canvas, _reportlab_Color, _reportlab_colors
+
+
+def _ensure_converter():
+    global Converter
+    if Converter is None:
+        try:
+            from pdf2docx import Converter as _Converter
+
+            Converter = _Converter
+        except Exception:  # pragma: no cover
+            return None
+    return Converter
+
+
+def _ensure_fitz():
+    global fitz
+    if fitz is None:
+        try:
+            import pymupdf as _fitz  # PyMuPDF (alias "fitz" obsoleto)
+
+            fitz = _fitz
+        except Exception:  # pragma: no cover
+            try:
+                import fitz as _fitz
+
+                fitz = _fitz
+            except Exception:
+                return None
+    return fitz
+
+
+def _ensure_pdfplumber():
+    global pdfplumber
+    if pdfplumber is None:
+        try:
+            import pdfplumber as _pdfplumber
+
+            pdfplumber = _pdfplumber
+        except Exception:  # pragma: no cover
+            return None
+    return pdfplumber
+
+
+def _ensure_pptx():
+    global Presentation, Inches
+    if Presentation is None or Inches is None:
+        try:
+            from pptx import Presentation as _Presentation
+            from pptx.util import Inches as _Inches
+
+            Presentation = _Presentation
+            Inches = _Inches
+        except Exception:  # pragma: no cover
+            return None, None
+    return Presentation, Inches
+
+
+def _ensure_openpyxl():
+    global openpyxl
+    if openpyxl is None:
+        try:
+            import openpyxl as _openpyxl
+
+            openpyxl = _openpyxl
+        except Exception:  # pragma: no cover
+            return None
+    return openpyxl
+
+
+def _ensure_weasyprint():
+    global WeasyHTML
+    if WeasyHTML is None:
+        try:
+            from weasyprint import HTML as _WeasyHTML
+
+            WeasyHTML = _WeasyHTML
+        except Exception:  # pragma: no cover
+            return None
+    return WeasyHTML
+
+
+def _ensure_pyhanko():
+    global IncrementalPdfFileWriter, pyhanko_signers, PdfSignatureMetadata
+    if pyhanko_signers is None:
+        try:
+            from pyhanko.pdf_utils.incremental_writer import (
+                IncrementalPdfFileWriter as _Writer,
+            )
+            from pyhanko.sign import signers as _signers
+            from pyhanko.sign.signers import PdfSignatureMetadata as _Meta
+
+            IncrementalPdfFileWriter = _Writer
+            pyhanko_signers = _signers
+            PdfSignatureMetadata = _Meta
+        except Exception:  # pragma: no cover
+            return None, None, None
+    return IncrementalPdfFileWriter, pyhanko_signers, PdfSignatureMetadata
 
 app = Flask(__name__)
 
@@ -972,16 +1050,30 @@ def pdf_a_imagen():
             return render_template("pdf_a_imagen.html", error="El archivo no se puede leer como PDF.",
                                   format=request.form.get("format", "jpg"))
 
-        # Convertir cada página a imagen con pdf2image
-        images = convert_from_path(filepath, dpi=200)
-        total_pages = len(images)
-
-        # Guardar las imágenes
+        # Convertir páginas en lotes para acotar memoria en PDF grandes.
+        reader = PdfReader(filepath)
+        total_pages = len(reader.pages)
         image_files = []
-        for i, image in enumerate(images):
-            image_path = os.path.join(temp_dir, f"pagina_{i + 1}.{format_choice}")
-            image.save(image_path, "JPEG" if format_choice == "jpg" else "PNG")
-            image_files.append((f"pagina_{i + 1}.{format_choice}", image_path))
+        chunk_size = 10
+        for start in range(1, total_pages + 1, chunk_size):
+            end = min(start + chunk_size - 1, total_pages)
+            images = convert_from_path(
+                filepath,
+                dpi=200,
+                first_page=start,
+                last_page=end,
+                timeout=EXTERNAL_TIMEOUT,
+            )
+            for offset, image in enumerate(images):
+                page_num = start + offset
+                image_path = os.path.join(temp_dir, f"pagina_{page_num}.{format_choice}")
+                image.save(image_path, "JPEG" if format_choice == "jpg" else "PNG")
+                image_files.append((f"pagina_{page_num}.{format_choice}", image_path))
+            for image in images:
+                try:
+                    image.close()
+                except Exception:
+                    pass
 
         if total_pages == 1:
             # Una sola página: descargar la imagen directamente
@@ -1104,13 +1196,20 @@ def imagen_a_pdf():
 
         # Guardar resultado como PDF
         output_path = os.path.join(temp_dir, "imagenes.pdf")
-        if len(pdf_images) == 1:
-            pdf_images[0].save(output_path, "PDF")
-        else:
-            # Primera imagen como página principal, el resto como páginas adicionales
-            pdf_images[0].save(
-                output_path, "PDF", save_all=True, append_images=pdf_images[1:]
-            )
+        try:
+            if len(pdf_images) == 1:
+                pdf_images[0].save(output_path, "PDF")
+            else:
+                # Primera imagen como página principal, el resto como páginas adicionales
+                pdf_images[0].save(
+                    output_path, "PDF", save_all=True, append_images=pdf_images[1:]
+                )
+        finally:
+            for img in pdf_images:
+                try:
+                    img.close()
+                except Exception:
+                    pass
 
         return _send_file_and_cleanup(output_path, "imagenes.pdf", temp_dir)
 
@@ -1167,7 +1266,10 @@ def pdf_a_word():
 
         # Convertir con pdf2docx
         output_path = os.path.join(temp_dir, "convertido.docx")
-        cv = Converter(filepath)
+        ConverterClass = _ensure_converter()
+        if ConverterClass is None:
+            raise ConversionError("Falta pdf2docx para convertir a Word.")
+        cv = ConverterClass(filepath)
         cv.convert(output_path, start=0, end=None)
         cv.close()
 
@@ -1485,16 +1587,31 @@ def ocr():
         if not validate_pdf(filepath):
             return render_template("ocr.html", error="El archivo no se puede leer como PDF.")
 
-        # Convertir cada página del PDF a imagen con pdf2image (necesita Poppler)
-        images = convert_from_path(filepath, dpi=200)
-
-        # Extraer texto de cada página con pytesseract (necesita Tesseract OCR)
+        # Convertir y OCR en lotes para acotar memoria.
+        reader = PdfReader(filepath)
         all_text = []
-        for i, image in enumerate(images):
-            text = pytesseract.image_to_string(image, lang=lang)
-            all_text.append(f"--- Página {i + 1} ---\n{text}")
+        chunk_size = 10
+        for start in range(1, len(reader.pages) + 1, chunk_size):
+            end = min(start + chunk_size - 1, len(reader.pages))
+            images = convert_from_path(
+                filepath,
+                dpi=200,
+                first_page=start,
+                last_page=end,
+                timeout=EXTERNAL_TIMEOUT,
+            )
+            for offset, image in enumerate(images):
+                page_num = start + offset
+                text = pytesseract.image_to_string(
+                    image, lang=lang, timeout=EXTERNAL_TIMEOUT
+                )
+                all_text.append(f"--- Página {page_num} ---\n{text}")
+            for image in images:
+                try:
+                    image.close()
+                except Exception:
+                    pass
 
-        # Unir todo el texto en un solo string
         full_text = "\n\n".join(all_text)
 
         # Guardar en un archivo .txt
@@ -1577,19 +1694,34 @@ def ocr_a_pdf():
                 "ocr_a_pdf.html", error="El archivo no se puede leer como PDF."
             )
 
-        # Una imagen por página, a 200 ppp como en /ocr.
-        images = convert_from_path(filepath, dpi=200)
+        # Una imagen por página, en lotes para acotar memoria.
         reader = PdfReader(filepath)
+        total_pages = len(reader.pages)
         writer = PdfWriter()
-
-        for page, image in zip(reader.pages, images):
-            layer_bytes = pytesseract.image_to_pdf_or_hocr(
-                image, lang=lang, extension="pdf"
+        chunk_size = 10
+        for start in range(1, total_pages + 1, chunk_size):
+            end = min(start + chunk_size - 1, total_pages)
+            images = convert_from_path(
+                filepath,
+                dpi=200,
+                first_page=start,
+                last_page=end,
+                timeout=EXTERNAL_TIMEOUT,
             )
-            layer = PdfReader(_ocr_text_layer(layer_bytes))
-            # pypdf 7 exige añadir la página antes de superponer (ver /marcar-agua).
-            writer.add_page(page)
-            writer.pages[-1].merge_page(layer.pages[0])
+            for offset, image in enumerate(images):
+                page_idx = start - 1 + offset
+                layer_bytes = pytesseract.image_to_pdf_or_hocr(
+                    image, lang=lang, extension="pdf", timeout=EXTERNAL_TIMEOUT
+                )
+                layer = PdfReader(_ocr_text_layer(layer_bytes))
+                # pypdf 7 exige añadir la página antes de superponer (ver /marcar-agua).
+                writer.add_page(reader.pages[page_idx])
+                writer.pages[-1].merge_page(layer.pages[0])
+            for image in images:
+                try:
+                    image.close()
+                except Exception:
+                    pass
 
         output_path = os.path.join(temp_dir, "buscable.pdf")
         with open(output_path, "wb") as handle:
@@ -1599,7 +1731,7 @@ def ocr_a_pdf():
         return render_template(
             "ocr_a_pdf.html",
             success=True,
-            pages=len(images),
+            pages=total_pages,
             download_token=os.path.basename(temp_dir),
         )
 
@@ -1775,13 +1907,22 @@ def descargar_limpiar_metadatos(token):
 
 # ─── Marca de agua en PDF ─────────────────────────────────────────────
 
+_WATERMARK_CACHE = {}
+
+
 def create_watermark_pdf(text, page_width, page_height, angle=45, font_size=60, opacity=0.3):
     """
     Crea un PDF de una página con el texto de marca de agua semitransparente en diagonal.
     Usa reportlab para generar el PDF en memoria.
     """
+    key = (text, round(page_width, 2), round(page_height, 2), angle, font_size, opacity)
+    cached = _WATERMARK_CACHE.get(key)
+    if cached is not None:
+        return BytesIO(cached)
+
+    canvas_mod, Color, _ = _ensure_reportlab()
     packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+    c = canvas_mod.Canvas(packet, pagesize=(page_width, page_height))
 
     # Color gris semitransparente
     watermark_color = Color(0.5, 0.5, 0.5, alpha=opacity)
@@ -1797,8 +1938,11 @@ def create_watermark_pdf(text, page_width, page_height, angle=45, font_size=60, 
     c.restoreState()
 
     c.save()
-    packet.seek(0)
-    return packet
+    data = packet.getvalue()
+    if len(_WATERMARK_CACHE) > 256:
+        _WATERMARK_CACHE.clear()
+    _WATERMARK_CACHE[key] = data
+    return BytesIO(data)
 
 
 @app.route("/marcar-agua", methods=["GET", "POST"])
@@ -1888,10 +2032,11 @@ def create_page_number_pdf(page_width, page_height, number, position="bottom_cen
     Crea un PDF de una página con el número de página en la posición elegida.
     Usa reportlab para generar el PDF en memoria.
     """
+    canvas_mod, _, colors_mod = _ensure_reportlab()
     packet = BytesIO()
-    c = canvas.Canvas(packet, pagesize=(page_width, page_height))
+    c = canvas_mod.Canvas(packet, pagesize=(page_width, page_height))
     c.setFont("Helvetica", font_size)
-    c.setFillColor(colors.black)  # Negro
+    c.setFillColor(colors_mod.black)  # Negro
 
     text = str(number)
 
@@ -2270,7 +2415,7 @@ def _docx_to_html(input_path):
 
 
 def _xlsx_to_html(input_path):
-    if openpyxl is None:
+    if _ensure_openpyxl() is None:
         raise ConversionError("Falta openpyxl para leer la hoja de cálculo.")
     wb = openpyxl.load_workbook(input_path, data_only=True)
     parts = ["<html><body>"]
@@ -2289,7 +2434,7 @@ def _xlsx_to_html(input_path):
 
 
 def _pptx_to_html(input_path):
-    if Presentation is None:
+    if _ensure_pptx()[0] is None:
         raise ConversionError("Falta python-pptx para leer la presentación.")
     prs = Presentation(input_path)
     parts = ["<html><body>"]
@@ -2325,7 +2470,7 @@ def _escape_html(s):
 
 
 def _html_to_pdf(html_str, output_path):
-    if WeasyHTML is None:
+    if _ensure_weasyprint() is None:
         raise ConversionError("Falta WeasyPrint para convertir HTML a PDF.")
     WeasyHTML(string=html_str).write_pdf(output_path)
 
@@ -2412,6 +2557,8 @@ def pdf_a_excel():
         if not validate_pdf(filepath):
             raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
         output_path = os.path.join(temp_dir, "convertido.xlsx")
+        _ensure_pdfplumber()
+        _ensure_openpyxl()
         if pdfplumber is None or openpyxl is None:
             raise ConversionError("Faltan pdfplumber u openpyxl para extraer tablas del PDF.")
         wb = openpyxl.Workbook()
@@ -2488,17 +2635,34 @@ def pdf_a_powerpoint():
         if not validate_pdf(filepath):
             raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
         output_path = os.path.join(temp_dir, "convertido.pptx")
+        _ensure_pptx()
         if Presentation is None:
             raise ConversionError("Falta python-pptx para crear la presentación.")
-        images = convert_from_path(filepath, dpi=150)
+        reader = PdfReader(filepath)
+        total_pages = len(reader.pages)
         prs = Presentation()
         blank_layout = prs.slide_layouts[6] if len(prs.slide_layouts) > 6 else prs.slide_layouts[-1]
-        for img in images:
-            img_path = os.path.join(temp_dir, f"_slide_{len(prs.slides)}.png")
-            img.save(img_path, "PNG")
-            slide = prs.slides.add_slide(blank_layout)
-            slide.shapes.add_picture(img_path, Inches(0), Inches(0), width=Inches(10), height=Inches(7.5))
-            os.remove(img_path)  # python-pptx ya ha incrustado la imagen
+        chunk_size = 10
+        for start in range(1, total_pages + 1, chunk_size):
+            end = min(start + chunk_size - 1, total_pages)
+            images = convert_from_path(
+                filepath,
+                dpi=150,
+                first_page=start,
+                last_page=end,
+                timeout=EXTERNAL_TIMEOUT,
+            )
+            for img in images:
+                img_path = os.path.join(temp_dir, f"_slide_{len(prs.slides)}.png")
+                img.save(img_path, "PNG")
+                slide = prs.slides.add_slide(blank_layout)
+                slide.shapes.add_picture(img_path, Inches(0), Inches(0), width=Inches(10), height=Inches(7.5))
+                os.remove(img_path)  # python-pptx ya ha incrustado la imagen
+            for img in images:
+                try:
+                    img.close()
+                except Exception:
+                    pass
         prs.save(output_path)
         keep_temp = True
         return render_template(
@@ -2552,7 +2716,7 @@ def pdf_a_html():
         if not validate_pdf(filepath):
             raise ConversionError("El archivo no se puede leer como PDF. Puede estar dañado o protegido.")
         output_path = os.path.join(temp_dir, "convertido.html")
-        if fitz is None:
+        if _ensure_fitz() is None:
             raise ConversionError("Falta PyMuPDF para convertir el PDF a HTML.")
         doc = fitz.open(filepath)
         pages_html = []
@@ -2722,7 +2886,7 @@ def excel_a_pdf():
         if ext == "csv":
             # convertir CSV a xlsx para poder renderizarlo como tabla
             import csv as _csv
-            if openpyxl is None:
+            if _ensure_openpyxl() is None:
                 raise ConversionError("Falta openpyxl para leer la hoja de cálculo.")
             wb = openpyxl.Workbook()
             ws = wb.active
@@ -2877,10 +3041,13 @@ def descargar_pdf_convertido(token):
 MAX_COMPARE_PAGES = 100
 
 
-def _page_texts(pdf_path):
-    """Devuelve el texto extraído de cada página de un PDF."""
+def _page_texts(pdf_path, max_pages=None):
+    """Devuelve (textos, total_paginas), extrayendo como máximo max_pages."""
     reader = PdfReader(pdf_path)
-    return [page.extract_text() or "" for page in reader.pages]
+    pages = reader.pages
+    total = len(pages)
+    limit = total if max_pages is None else min(total, max_pages)
+    return [pages[i].extract_text() or "" for i in range(limit)], total
 
 
 @app.route("/firmar", methods=["GET", "POST"])
@@ -2913,6 +3080,7 @@ def firmar():
     if size_error:
         return size_error
 
+    _ensure_pyhanko()
     if IncrementalPdfFileWriter is None:
         return render_template(
             "firmar.html",
@@ -2984,7 +3152,7 @@ def censurar():
     size_error = validate_file_size(pdf_file, "censurar.html")
     if size_error:
         return size_error
-    if fitz is None:
+    if _ensure_fitz() is None:
         return render_template(
             "censurar.html",
             error="La censura no está disponible. Instala las dependencias del proyecto.",
@@ -3057,28 +3225,37 @@ def comparar():
                 )
             paths.append(path)
 
-        texts = [_page_texts(path) for path in paths]
-        total_pages = max(len(texts[0]), len(texts[1]))
+        (texts1, total1), (texts2, total2) = (
+            _page_texts(path, MAX_COMPARE_PAGES) for path in paths
+        )
+        total_pages = max(total1, total2)
         shown_pages = min(total_pages, MAX_COMPARE_PAGES)
         differ = difflib.HtmlDiff(wrapcolumn=78)
         diffs = []
         for index in range(shown_pages):
-            lines1 = (texts[0][index] if index < len(texts[0]) else "").splitlines()
-            lines2 = (texts[1][index] if index < len(texts[1]) else "").splitlines()
-            diffs.append(
-                {
-                    "page": index + 1,
-                    "changed": lines1 != lines2,
-                    "table": differ.make_table(
-                        lines1,
-                        lines2,
-                        fromdesc="PDF 1",
-                        todesc="PDF 2",
-                        context=True,
-                        numlines=2,
-                    ),
-                }
-            )
+            lines1 = (texts1[index] if index < len(texts1) else "").splitlines()
+            lines2 = (texts2[index] if index < len(texts2) else "").splitlines()
+            changed = lines1 != lines2
+            if changed:
+                table = differ.make_table(
+                    lines1,
+                    lines2,
+                    fromdesc="PDF 1",
+                    todesc="PDF 2",
+                    context=True,
+                    numlines=2,
+                )
+            else:
+                table = (
+                    '<table class="diff"><tbody><tr>'
+                    '<td class="diff_next"></td>'
+                    '<td class="diff_header">PDF 1</td>'
+                    '<td class="diff_next"></td>'
+                    '<td class="diff_header">PDF 2</td>'
+                    "</tr><tr><td></td><td colspan=\"3\">"
+                    "Sin cambios en esta página.</td></tr></tbody></table>"
+                )
+            diffs.append({"page": index + 1, "changed": changed, "table": table})
 
         return render_template(
             "comparar.html",

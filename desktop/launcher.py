@@ -162,7 +162,7 @@ def main(argv=None):
 
     from werkzeug.serving import make_server
 
-    port = args.port or choose_port(HOST)
+    port = args.port if args.port else 0
     server = make_server(HOST, port, flask_app, threaded=True)
     print(format_ready(HOST, server.server_port), flush=True)
 

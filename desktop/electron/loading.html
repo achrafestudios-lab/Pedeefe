@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pedeefe</title>
+  <style>
+    :root { color-scheme: light dark; }
+    * { box-sizing: border-box; margin: 0; }
+    body {
+      min-height: 100vh; display: grid; place-items: center;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      background: #f6f7fb; color: #1f2937;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #16181d; color: #f3f4f6; }
+      .card { background: #1f232b; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+      .muted { color: #b0b7c3; }
+    }
+    .card {
+      text-align: center; padding: 2.5rem 2rem; width: min(28rem, calc(100vw - 2rem));
+      background: #fff; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,.08);
+    }
+    .logo {
+      width: 72px; height: 72px; margin: 0 auto 1rem; border-radius: 18px;
+      background: #DE2B3F; color: #fff; display: grid; place-items: center;
+      font-weight: 800; font-size: 2rem;
+    }
+    h1 { font-size: 1.5rem; margin-bottom: .35rem; }
+    .muted { color: #6b7280; font-size: .95rem; }
+    .spinner {
+      width: 28px; height: 28px; margin: 1.25rem auto 0;
+      border: 3px solid rgba(222,43,63,.2); border-top-color: #DE2B3F;
+      border-radius: 50%; animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="card" role="status" aria-live="polite">
+    <div class="logo" aria-hidden="true">P</div>
+    <h1>Pedeefe</h1>
+    <p class="muted">Iniciando el motor local…</p>
+    <div class="spinner" aria-hidden="true"></div>
+  </div>
+</body>
+</html>
